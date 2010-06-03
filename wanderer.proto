@@ -1,0 +1,35 @@
+package wanderer;
+message InitialGroup {
+    enum MsgType { 
+        JOIN = 1;
+        STAT = 2;
+    }  
+
+    //"Union" type
+    optional Join join = 1;
+    optional Stat stat = 2;
+
+}
+message Join {
+    required string playername = 1;
+}
+message Stat {
+    required string key =1;
+}
+
+message InWorldGroup {
+    enum MsgType {
+        WALK = 1;
+    }
+    optional Walk walk = 1;
+}
+
+message Walk {
+    enum Direction {
+        DIRECTION_UP = 1;
+        DIRECTION_DOWN = 2;
+        DIRECTION_LEFT = 3;
+        DIRECTION_RIGHT = 4;
+    }
+    required Direction direction = 1;
+}
