@@ -28,6 +28,7 @@ type Routine struct {
     State State
     Chan chan *Message
 }
+
 func (r *Routine) Init() {
     r.Chan = make(chan *Message)
 }
