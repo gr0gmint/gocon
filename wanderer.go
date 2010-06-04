@@ -12,8 +12,8 @@ import "reflect"
 
 
 const (
- WORLD_SIZE_X = 100
- WORLD_SIZE_Y = 100
+ WORLD_SIZE_X = 1024 //For better use in CenterTree
+ WORLD_SIZE_Y = 1024
 )
 
 
