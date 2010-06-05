@@ -2,9 +2,11 @@ package main
 
 
 import "math"
+import . "container/vector"
 
 type Interval struct {
     Śtart, Stop int
+    Sibling *Interval
     Data interface{}
 }
 
@@ -73,16 +75,16 @@ func (c *CenterNode) AddInterval(interval *Interval) {
     }
     
 }
-func (c *CenterTree) FindIntervals(point int) []Interval { //The chan is for asynchronous searching
+func (c *CenterTree) FindIntervals(point int) *Vector /* *Interval */ { //The chan is for asynchronous searching
     acc_chan := make(chan *Interval, 100)
-    intervals := make(interface{}, 100)
+    intervals := new(Vector)
     go c.Top.searchNodeForPoint(point, acc_chan)
-    for i := 0; i <100; i++ {
-        intervals[i] = <- acc_chan
-        if intervals[i] == nil {
-            intervals = intervals[0:i+1]
+    for {
+        i := <-acc_chan
+        if i == nil {
             break
         }
+        intervals.Push(i)
     }
     return intervals
 }
@@ -130,21 +132,17 @@ func (f *FilterPlayer) ParseBroadcast(b *Broadcast) {
     }
 }
 
-type distance struct {
-    X,Y int
-}
 type FilterDistanceFromPlayer struct { 
     //Some time<->memory tradeoff could be needed here. Solved with Interval tree
     XTree *CenterTree
-    YTree *CenterTree
 }
 func NewFilterDistanceFromPlayer() *FilterDistanceFromPlayer {
     f := new(FilterDistanceFromPlayer)
     f.XTree = NewCenterTree(0, WORLDSIZE_X)
-    f.YTree = NewCenterTree(0,WORLDSIZE_Y)
     return f
 }
 
+/*
 func FindSimilar(a []interface{},  b []interface{}) []*Filter {
     acc := NewArray()
     var num = 0
@@ -156,17 +154,43 @@ func FindSimilar(a []interface{},  b []interface{}) []*Filter {
         }
     }
     return (acc.A).([]*Filter)
-    
-    
+*/
+}
+func FindOverlapping(v *Vector, coord *Coord) *Vector { //The siblings of the intervals are checked for overlapping
+    c := v.Iter()
+    overlapping := new(Vector)
+    for {
+        if i.(*Interval), ok := <-c; !ok {
+            break
+        }
+        if i.Sibling.Start <= coord.X && i.Sibling.Stop >= coord.Y {
+            overlapping.Push(i)
+        }
+    }
+    return overlapping
 }
 
 func (f *FilterDistanceFromPlayer) ParseBroadcast(b *Broadcast) {
     coord := b.Data["coord"].(*Coord)
-    intervalsx := f.XTree.FindIntervals(coord.X)
-    intervalsy := f.YTree.FindIntervals(coord.Y)
-    
+    v_intervalsx := f.XTree.FindIntervals(coord.X)
+    overlapping := FindOverlapping(v_intervalsx, coord)   
+    c := overlapping.Iter()
+    for {
+        if i.(*Interval), ok := <-c; !ok { break; }
+        filter := i.Data["filter"].(*Filter)
+        go filter.ParseBroadcast(b)
+    }
     
 }
-func (f *FilterDistanceFromPlayer) AddFilter(f *Filter) {
+func (f *FilterDistanceFromPlayer) AddFilter(startX,stopX,startY,stopY int, f *Filter) {
+    intervalX := new(Interval)
+    intervalY := new(Interval)
+    intervalX.Sibling = intervalY
+    intervalX.Start = startX
+    intervalX.Stop = stopX
+    intervalY.Start = startY
+    intervalY.Stop = stopY
     
+    intervalX.Data["filter"] = f
+    f.XTree.AddInterval(intervalX)  
 }

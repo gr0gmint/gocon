@@ -183,8 +183,7 @@ func (p *ProtoHandler) Main() {
 }
 
 type Server struct {
-    Routine
-    
+    Routine   
 }
 
 func (r *Server) Main() { 
