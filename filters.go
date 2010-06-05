@@ -75,12 +75,12 @@ func (c *CenterNode) AddInterval(interval *Interval) {
 }
 func (c *CenterTree) FindIntervals(point int) []Interval { //The chan is for asynchronous searching
     acc_chan := make(chan *Interval, 100)
-    intervals := make(*Interval, 100)
+    intervals := make(interface{}, 100)
     go c.Top.searchNodeForPoint(point, acc_chan)
-    num_intervals := 0
     for i := 0; i <100; i++ {
         intervals[i] = <- acc_chan
         if intervals[i] == nil {
+            intervals = intervals[0:i+1]
             break
         }
     }
@@ -144,8 +144,27 @@ func NewFilterDistanceFromPlayer() *FilterDistanceFromPlayer {
     f.YTree = NewCenterTree(0,WORLDSIZE_Y)
     return f
 }
+
+func FindSimilar(a []interface{},  b []interface{}) []*Filter {
+    acc := NewArray()
+    var num = 0
+    for _, avalue := range a {
+        for _,bvalue := range b {
+            if avalue == bvalue {
+                acc.Append(avalue)
+            }
+        }
+    }
+    return (acc.A).([]*Filter)
+    
+    
+}
+
 func (f *FilterDistanceFromPlayer) ParseBroadcast(b *Broadcast) {
     coord := b.Data["coord"].(*Coord)
+    intervalsx := f.XTree.FindIntervals(coord.X)
+    intervalsy := f.YTree.FindIntervals(coord.Y)
+    
     
 }
 func (f *FilterDistanceFromPlayer) AddFilter(f *Filter) {
