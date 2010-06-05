@@ -1,27 +1,47 @@
-package wanderer;
-message InitialGroup {
-    enum MsgType { 
-        JOIN = 1;
-        STAT = 2;
-    }  
+package pwanderer;
 
-    //"Union" type
-    optional Join join = 1;
-    optional Stat stat = 2;
+message Server { //Not really a message
+
+    enum Type {
+        ANSWERBOOL = 1;
+        ANSWER = 2;  //Use JSON? I think so ;V ;V ;V
+        TEXTMESSAGE = 3;
+        LOCATION = 4;
+        PLAYERMOVE = 5;
+        OBJECTMOVE = 6;
+        OBJECT = 7;
+        INVENTORY = 8;
+        ATTACK = 9;
+        PLAYERATTR = 10;
+        SOCIAL = 11;
+        QUESTLOG = 12;
+    }
 
 }
+message Client {
+    enum Type { 
+    
+    JOIN = 1;
+    WALK = 2;
+    INTERACT = 3;
+    INVENTORY = 4;
+    ATTACK = 5;
+    PLAYERATTR = 6;
+    QUESTLOG = 7;
+    SOCIAL = 8;
+    ANSWERBOOL = 9;
+    ANSWER = 10; //JSON
+    }
+}
+
+message Header {
+    required int32 size = 1;
+    required int32 type = 2;
+    
+}
+
 message Join {
     required string playername = 1;
-}
-message Stat {
-    required string key =1;
-}
-
-message InWorldGroup {
-    enum MsgType {
-        WALK = 1;
-    }
-    optional Walk walk = 1;
 }
 
 message Walk {

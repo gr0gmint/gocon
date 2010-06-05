@@ -7,7 +7,6 @@ import "net"
 import "os"
 import "reflect"
 
-//import "goprotobuf.googlecode.com/hg/proto"
 
 
 
@@ -168,20 +167,6 @@ func (r *WorldHandler) parseShared(shared map[string]interface{}) {
 
 
 
-
-type ProtoHandler struct {
-    Routine
-    Conn *net.Conn
-}
-func NewProtoHandler(c *Conn) *ProtoHandler {
-    p := new(ProtoHandler)
-    p.Conn = c
-    return p
-}
-func (p *ProtoHandler) Main() {
-    
-}
-
 type Server struct {
     Routine   
 }
@@ -192,9 +177,10 @@ func (r *Server) Main() {
     laddr.Port = 7777
     listener := net.ListenTCP("tcp", laddr)
     for {
-        conn,ok := listener.AcceptTCP()
-        if !ok {
+        conn,err := listener.AcceptTCP()
+        if !err {
             NewProtoHandler(conn)
+            go NewProtoHandler.Main()
         }
     }   
 }
