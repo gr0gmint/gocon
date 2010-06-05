@@ -3,7 +3,7 @@ package main
 import "./gocon"
 import "fmt"
 import "time"
-//KRIG spil  (kortspillet)
+
 
 
 

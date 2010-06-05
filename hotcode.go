@@ -6,7 +6,7 @@ import . "gocon"
 type Hot interface { //Hot code "swapping"
     Unpack(map[string]interface{}) int
 }
-type NamedHot interface { //Hot code "swapping"
+type NamedHot interface {
     Hot
     Type() string
 }
@@ -30,4 +30,17 @@ func (e *HotPlayerJoin) Unpack(shared map[string]interface{})  int {
     }
     rchan <- m
     return 0
+}
+type GenericHot struct {
+    F func(interface{})
+    Answer chan *Message
+}
+func NewHot(f func(interface{})) *GenericHot {
+    h := new(GenericHot)
+    h.F = f
+    h.Answer = make(chan *Message)
+    return h
+}
+func (this *GenericHot) Unpack(data map[string]interface{}) {
+    F(data)
 }

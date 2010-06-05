@@ -6,11 +6,14 @@ import "./pwan"
 
 type ProtoHandler struct {
     Routine
-    Conn *net.Conn
+    ProtoHandler *net.Conn
     Player *Player
     Buffer []byte
     headersize int
 }
+type 
+
+
 func NewProtoHandler(c *Conn) *ProtoHandler {
     p := new(ProtoHandler)
     p.Conn = c
@@ -29,6 +32,22 @@ func (this *ProtoHandler) Read(size int) []byte, os.Error {
         return this.Buffer[0:total], nil
     }
 }
+type ConnHandler struct { 
+    Routine
+    Conn *Conn
+}
+func NewConnHandler(conn *Conn) *ConnHandler {
+    c := new(ConnHandler)
+    c.Conn = conn
+    c.Init()
+    return c
+}
+func (this *ConnHandler) Main() {
+    for {
+        
+    }
+}
+
 func (this *ProtoHandler) RecvMsg(msg interface{}) *pwan.Header,[]byte, os.error() {
 
     //Read header first
@@ -67,27 +86,60 @@ func (this *ProtoHandler) Declinebool() {
         msg.Accept = false
         this.SendMsg(msg)
 }
-
-func (this *ProtoHandler) Main() {
-    //We want to know how big a Header-marshalized buffer is:
+func (this *ProtoHandler) Init {
     temphdr := pwan.NewHeader()
     temphdr.Size = 0xf00
     data, _ := proto.Marshal(temphdr)
     this.headersize = len(data)
     
-    p.Buffer := make([]byte, 100000)
+    p.Buffer := make([]byte, 10000)
+}
+
+type InitProtoHandler struct {
+    ProtoHandler
+}
+
+func (this *InitProtoHandler) Main() {
+    this.Init()
     
     joinmsg := pwan.NewClientJoin()
-    if header, _, err := this.RecvMsg(pwan.New()); err {
+    if header, _, err := this.RecvMsg(joinmsg); err {
         this.Conn.Close()
         return
     } else {
         this.Player = NewPlayer()
         this.Player.Name = joinmsg.Playername
         
+        worldhandler := GlobalRoutines["worldhandler"].(*WorldHandler)
+        worldhandler.PlacePlayer(this.Player, world.GetCoord(50,50))
+        inworldhandler := new(InWorldProtoHandler)
+        inworldhandler.Conn = this.Conn
+        go inworldhandler.Main()
     }
     
 }   
+
+type InWorldProtoHandler struct {
+    ProtoHandler
+}
+func (this *InWorldProtoHandler) Cleanup () {
+    //remove player from world
+}
+
+func (this *InWorldProtoHandler) Main() {
+    this.Init()
+    defer this.Cleanup()
+    
+    
+    //go ObjectPusher
+    for {
+        header, data, err := this.RecvMsg(nil); err {
+            this.Conn.Close()
+            return
+        }
+        switch {
+            
+        }
         
-
-
+    }
+}

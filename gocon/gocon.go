@@ -1,6 +1,6 @@
 package gocon
 
-var GlobalRoutines = make(map[string] *Routine)
+var GlobalRoutines = make(map[string]interface{})
 const (
   _ = 1 << iota
   MSG_NOTIF
@@ -18,14 +18,9 @@ func NewMessage() *Message {
     return m
 }
 
-type State struct {
-    Name string
-    Data map[string]string
-}
 
 type Routine struct {
     Name string
-    State State
     Chan chan *Message
 }
 

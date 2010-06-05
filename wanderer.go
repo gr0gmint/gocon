@@ -8,7 +8,8 @@ import "os"
 import "reflect"
 
 
-
+/* TODO:
+     save to db */
 
 const (
  WORLD_SIZE_X = 1024 //For better use in CenterTree
@@ -61,7 +62,7 @@ func NewWorld () *World {
 func (w *World) PlacePlayer(player *Player, c *Coord)  bool {
     
     
-    if coord,ok := w.PlayerIndex[player]; ok {  //Delete current entry of player in world
+    if coord,ok := w.PlayerIndex[player]; ok {  
         if _,ok = coord.Players()[player.Name]; ok {
             coord.Players()[player.Name] = nil
         }
@@ -75,7 +76,6 @@ func (w *World) GetCoord(x,y int) *Coord {
     return &w.Coords[x+y*WORLD_SIZE_X]
 }
 
-//This is basically the main routine of the server
 type WorldHandler struct {
     Routine
     World *World
@@ -85,86 +85,78 @@ type Player struct {
     Name string
     PRoutine *Routine
 }
-
+func (r *WorldHandler) queryHot(h *Hot) {
+    m := NewMessage()
+    m.Key = "hot"
+    m.Data["hot"] = h
+    go func() { this.Chan<-m; }()
+}
 func (r *WorldHandler) Main()  {
     r.Name =  "worldhandler"
+    r.Register()
     r.Init()
     r.World = NewWorld()
 
-    //setup some stuff
 
-    //main loop
     var m  *Message
-    var rchan chan *Message //Reponse channel, if needed
+    var rchan chan *Message
     for {
-        m,rchan = r.ReceiveMessage()
+        m,_ = r.ReceiveMessage()
         msgtype := m.Key
         switch {
             case msgtype == "hot":
-                e := m.Data["hotcode"].(*Hot)
+                e := m.Data["hot"].(*Hot)
                 shared := make(map[string]interface{})
-                shared["rchan"] = rchan
                 shared["world"] = r
-                /*whatdo := */ e.Unpack(shared)
-            case msgtype == "rpc":
-                //We use the awesome reflect package here
-                rpc := m.Data["rpc"].(*RPC)                
+                 e.Unpack(shared)
+            //case msgtype == "rpc":
+            //    rpc := m.Data["rpc"].(*RPC)                
         }    
     }
 }
-
 const (
     DIRECTION_UP = iota
     DIRECTION_DOWN
     DIRECTION_LEFT
     DIRECTION_RIGHT
 )
-type HotWorldPlayerMove struct {
-    Player *Player
-    direction int
+func (this *WorldHandler) PlayerMove(player *Player, direction int) {
+    h:=NewHot(func(shared map[string]interface{}){
+    
+            world := shared["world"].(*World)
+            var dirx,diry = 0,0
+            switch {
+                case e.direction == DIRECTION_UP:
+                    diry += 1
+                case e.direction == DIRECTION_DOWN:
+                    diry -= 1
+                case e.direction == DIRECTION_LEFT:
+                    dirx -= 1
+                case e.direction == DIRECTION_RIGHT:
+                    dirx += 1
+            }
+            
+            currentcord := world.PlayerIndex[e.Player]
+
+            m:=NewMessage()
+            if currentcord.X+dirx > WORLD_SIZE_X || currentcord.X+dirx < 0 {
+                m.Key = "declined"
+            } else if currentcord.Y + diry > WORLD_SIZE_Y || currentcord.Y+diry < 0 {
+                m.Key = "declined"
+            } else {    
+                newcoord := world.GetCoord(currentcord.X+dirx, currentcord.Y+diry)
+                if world.PlacePlayer(e.Player, newcoord) {
+                    m.Key = "accepted"
+                } else {
+                    m.Key = "declined"
+                }
+            }
+            this.Answer<-m
+            
+    })
+    this.qeuryHot(h)
+    
 }
-func (e *HotWorldPlayerMove) Type() string { return "PlayerMovement" }
-
-func (e *HotWorldPlayerMove) Unpack(shared map[string]interface{}) int {
-    world := shared["world"].(*World)
-    rchan := shared["rchan"].(chan *Message)
-    var dirx,diry = 0,0
-    switch {
-        case e.direction == DIRECTION_UP:
-            diry += 1
-        case e.direction == DIRECTION_DOWN:
-            diry -= 1
-        case e.direction == DIRECTION_LEFT:
-            dirx -= 1
-        case e.direction == DIRECTION_RIGHT:
-            dirx += 1
-    }
-    currentcord := world.PlayerIndex[e.Player]
-
-    m:=NewMessage()
-    if currentcord.X+dirx > WORLD_SIZE_X || currentcord.X+dirx < 0 {
-        m.Key = "declined"
-    } else if currentcord.Y + diry > WORLD_SIZE_Y || currentcord.Y+diry < 0 {
-        m.Key = "declined"
-    } else {    
-        newcoord := world.GetCoord(currentcord.X+dirx, currentcord.Y+diry)
-        if world.PlacePlayer(e.Player, newcoord) {
-            m.Key = "accepted"
-        } else {
-            m.Key = "declined"
-        }
-    }
-    rchan <- m
-    return E_DIRECT
-}
-
-
-func (r *WorldHandler) parseShared(shared map[string]interface{}) {
-    //if log, ok := shared["log"].(string); ok { //Event want us to log something
-        //LOG FUNCTIONS
-    //}
-} 
-
 
 
 type Server struct {
@@ -189,7 +181,6 @@ func (r *Server) Main() {
 func main() {
    rand.Seed(time.Nanoseconds())
     worldhandler := new(WorldHandler)
-    worldhandler.Register()
     go worldhandler.Main()
 
    server := new(Server)
