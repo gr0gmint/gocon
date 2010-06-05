@@ -4,7 +4,7 @@ import "rand"
 import . "gocon"
 
 type Hot interface { //Hot code "swapping"
-    Unpack(map[string]interface{}) int
+    Unpack(interface{}) int
 }
 type NamedHot interface {
     Hot
@@ -41,6 +41,6 @@ func NewHot(f func(interface{})) *GenericHot {
     h.Answer = make(chan *Message)
     return h
 }
-func (this *GenericHot) Unpack(data map[string]interface{}) {
+func (this *GenericHot) Unpack(data interface{}) {
     F(data)
 }

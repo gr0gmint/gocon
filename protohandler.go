@@ -44,7 +44,14 @@ func NewConnHandler(conn *Conn) *ConnHandler {
 }
 func (this *ConnHandler) Main() {
     for {
-        
+        msg, _ := this.ReceiveMessage()
+        switch {
+            case msg.Key == "hot":
+                shared := make(map[string]interface{})
+                shared
+                msg.Data["hot"].(*Hot)
+                hot.Un
+        }
     }
 }
 

@@ -60,8 +60,6 @@ func NewWorld () *World {
 } 
 
 func (w *World) PlacePlayer(player *Player, c *Coord)  bool {
-    
-    
     if coord,ok := w.PlayerIndex[player]; ok {  
         if _,ok = coord.Players()[player.Name]; ok {
             coord.Players()[player.Name] = nil
@@ -79,6 +77,7 @@ func (w *World) GetCoord(x,y int) *Coord {
 type WorldHandler struct {
     Routine
     World *World
+    hotlock bool
 }
 
 type Player struct {
@@ -89,7 +88,12 @@ func (r *WorldHandler) queryHot(h *Hot) {
     m := NewMessage()
     m.Key = "hot"
     m.Data["hot"] = h
-    go func() { this.Chan<-m; }()
+    if !this.hotlock {
+        go func() { this.Chan<-m; }()
+    } else {
+        go h.F(nil)
+    }
+
 }
 func (r *WorldHandler) Main()  {
     r.Name =  "worldhandler"
@@ -108,7 +112,7 @@ func (r *WorldHandler) Main()  {
                 e := m.Data["hot"].(*Hot)
                 shared := make(map[string]interface{})
                 shared["world"] = r
-                 e.Unpack(shared)
+                e.Unpack(shared)
             //case msgtype == "rpc":
             //    rpc := m.Data["rpc"].(*RPC)                
         }    
@@ -120,10 +124,11 @@ const (
     DIRECTION_LEFT
     DIRECTION_RIGHT
 )
-func (this *WorldHandler) PlayerMove(player *Player, direction int) {
-    h:=NewHot(func(shared map[string]interface{}){
-    
-            world := shared["world"].(*World)
+func (this *WorldHandler) PlayerPlace(player *Playetr, coord *Coord) bool {
+}
+func (this *WorldHandler) PlayerMove(player *Player, direction int) bool {
+    h:=NewHot(func(data interface{}){
+            this.hotlock = true //Against deadlocks (if a hot calls another hot -_- )
             var dirx,diry = 0,0
             switch {
                 case e.direction == DIRECTION_UP:
@@ -136,7 +141,7 @@ func (this *WorldHandler) PlayerMove(player *Player, direction int) {
                     dirx += 1
             }
             
-            currentcord := world.PlayerIndex[e.Player]
+            currentcord := this.PlayerIndex[e.Player]
 
             m:=NewMessage()
             if currentcord.X+dirx > WORLD_SIZE_X || currentcord.X+dirx < 0 {
@@ -152,9 +157,14 @@ func (this *WorldHandler) PlayerMove(player *Player, direction int) {
                 }
             }
             this.Answer<-m
-            
+            this.hotlock = false
     })
-    this.qeuryHot(h)
+
+        this.qeuryHot(h)
+
+    m := <-h.Answer
+    if m.Key == "accepted" { return true; }
+    return false
     
 }
 
