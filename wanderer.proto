@@ -1,4 +1,4 @@
-package pwanderer;
+package pwan;
 
 message Server { //Not really a message
 
@@ -40,11 +40,11 @@ message Header {
     
 }
 
-message Join {
+message ClientJoin {
     required string playername = 1;
 }
 
-message Walk {
+message ClientWalk {
     enum Direction {
         DIRECTION_UP = 1;
         DIRECTION_DOWN = 2;
