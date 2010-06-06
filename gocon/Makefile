@@ -7,7 +7,9 @@ include $(GOROOT)/src/Make.$(GOARCH)
 TARG=gocon
 GOFILES=\
 	gocon.go\
-	array.go
+	hotcode.go\
+	protohandler.go\
+	header.pb.go
 
 
 include $(GOROOT)/src/Make.pkg
