@@ -5,55 +5,49 @@ import "goprotobuf.googlecode.com/hg/proto"
 import "./pwan"
 
 
-type InitProtoHandler struct {
-    Routine
-    ProtoHandler *net.Conn
-    Player *Player
-    Buffer []byte
-    headersize int
-}
 type ProtoProxy struct {
     HotRoutine
-    Default *ProtoHandler
-    Handlers map[string]*ProtoHandler   
+    Default *IProtoHandler
+    Handlers map[string]*IProtoHandler  
+    headersize int
+    Filter *ProtoFilter
 }
-func NewProtoProxy(conn *net.Conn, def *ProtoHandler) {
+type ProtoFilter interface {
+     Check(header *pwan.Header) bool
+}
+
+func (this *ProtoProxy) Init() {
+    temphdr := pwan.NewHeader()
+    temphdr.Size = 0xf00
+    data, _ := proto.Marshal(temphdr)
+    this.headersize = len(data)
+    this.Buffer := make([]byte, 10000)
+    this.SBuffer := make([]byte, 10000)
+    go this.Start()
+    p.Handlers = make(map[string]*IProtoHandler)
+}
+
+func NewProtoProxy(conn *net.Conn, def *IProtoHandler) *ProtoProxy {
     p := new(ProtoProxy)
     p.Conn = conn
     p.Default = def
-    p.Handlers = make(map[string]*ProtoHandler)
-}
-
-func (this *ProtoProxy) AddHandler(name string, handler *ProtoHandler) {
-    h := NewHot(func(shared map[string]interface{}){
-        //self := shared["self"].(*GenericHot)
-        this.Handlers[name] = handler
-    })
-    this.queryHot(h)
-}
-func (this *ProtoProxy) Main() {
-    this.Init()
-    go this.Start()
-    for {
-        
-    }
-}
-
-type ProtoHandler interface {
-    Handle(interface{})
-}
-
-func NewProtoHandler(c *Conn) *ProtoHandler {
-    p := new(ProtoHandler)
-    p.Conn = c
+    p.Init()
     return p
 }
-func (this *ProtoHandler) Read(size int) []byte, os.Error {
+
+func (this *ProtoProxy) AddHandler(name string, handler *IProtoHandler) {
+    this.Handlers[name] = handler
+}
+func (this *ProtoProxy) RemoveHandler(name string) {
+    this.Handlers[name] = nil
+}
+
+func (this *ProtoProxy) Read(size int) []byte, os.Error {
     
-    if size == 0 {
+    if size == nil || size <= 0 {
         return this.Conn.Read(this.Buffer)
     } else {
-        for total := 0; total < n {
+        for total := 0; total < size {
             n, err := this.Conn.Read(this.Buffer[total:size])
             total += n
             if err { return this.Buffer[0:total],err }
@@ -61,74 +55,78 @@ func (this *ProtoHandler) Read(size int) []byte, os.Error {
         return this.Buffer[0:total], nil
     }
 }
-type ConnHandler struct { 
-    Routine
-    Conn *Conn
-}
-func NewConnHandler(conn *Conn) *ConnHandler {
-    c := new(ConnHandler)
-    c.Conn = conn
-    c.Init()
-    return c
-}
-func (this *ConnHandler) Main() {
-    for {
-        msg, _ := this.ReceiveMessage()
-        switch {
-            case msg.Key == "hot":
-                shared := make(map[string]interface{})
-                shared
-                msg.Data["hot"].(*Hot)
-                hot.Un
-        }
-    }
-}
 
-func (this *ProtoHandler) RecvMsg(msg interface{}) *pwan.Header,[]byte, os.error() {
+func (this *ProtoProxy) readMsg() *pwan.Header,[]byte, os.error() {
 
     //Read header first
     if data,err := this.Read(this.headersize); !err  {
         header := NewHeader()
         proto.Unmarshal(data, header)
         data,err := this.Read(header.Size)
-        if msg == nil {
-            return header,data,err
-        }
-        proto.Unmarshal(data, msg)
-        return header,nil,err
+        return header,data,err
     } else {
         return nil,nil,err
     }
 } 
+func (this *ProtoProxy) Send(data []byte, handlername string = nil) {
+    h := NewHot(func(shared map[string]interface{}){
+        self := shared["self"].(*GenericHot)
+        header := pwan.NewHeader()
+        header.Handler = handlername
+        header.Size = len(data)
+        hdrdata,_ := proto.Marshal(header)
+        hdrlen := len(hdrdata)
+        *this.SBuffer[0:hdrlen] = *hdrdata
+        *this.SBuffer[hdrlen:hdrlen+len(data)] = *data
+        this.Conn.Send(this.SBuffer[0:hdrlen+len(data)])
+    })
+    this.queryHot(h)
 
-func (this *ProtoHandler) SendMsg(msg interface{})  os.Error {
-    header := NewHeader()
-    header.Size = len(data)
-    hdrdata,_ := proto.Marshal(header)
-    
-    this.Conn.Send(hdrdata)
-    
-    data,_ := proto.Marshal(msg)
-    this.Conn.Send(data)
-    return nil
 }
+
+
+func (this *ProtoProxy) Main() {
+    this.Init()
+    for {
+        if header, data, err := this.recvMsg(); !err {
+            this.Handlers[header.Handler].Handle(data)
+        } else {
+            this.Conn.Close()
+            return
+        }
+        
+    }
+}
+
+type ProtoHandler struct {
+    HotRoutine
+    Proxy *ProtoProxy
+    
+}
+
+type InitProtoHandler struct {
+    GenericProtoHandler
+}
+
+func NewInitProtoHandler(p *ProtoProxy) *InitProtoHandler {
+    p := new(ProtoHandler)
+    p.Proxy = p
+    return p
+}
+
+
+
 func (this *ProtoHandler) Acceptbool() {
         msg := pwan.NewAcceptBool()
         msg.Accept = true
-        this.SendMsg(msg)
+        data := proto.Marshal(msg)
+        this.Proxy.Send(data)
 }
 func (this *ProtoHandler) Declinebool() {
         msg := pwan.NewAcceptBool()
         msg.Accept = false
-        this.SendMsg(msg)
-}
-func (this *ProtoHandler) Init {
-    temphdr := pwan.NewHeader()
-    temphdr.Size = 0xf00
-    data, _ := proto.Marshal(temphdr)
-    this.headersize = len(data)
-    
-    p.Buffer := make([]byte, 10000)
+        data := proto.Marshal(msg)
+        this.Proxy.Send(data)
 }
 
 

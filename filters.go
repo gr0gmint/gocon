@@ -56,10 +56,21 @@ func (c *CenterNode) searchNodeForPoint(point int, acc_chan chan *Interval) {
 func (c *CenterNode) RemoveInterval(interval *Interval) {
     node := c.Tree.NodeMap[interval]
     length := node.Intervals.Len()
+    
     for i := 0; i < length; i++ {   
         if node.Intervals.At(i).(*Interval) == interval {
             node.Intervals.Swap(i,length-1)
-            node.Pop()
+            node.Intervals.Pop()
+            c.Tree.NodeMap[interval] = nil
+            if node.Intervals.Len() == 0 && node.Left == nil && node.Right == nil { //remove references to node
+                if node == c.Tree.Top {break;}
+                if node == node.Parent.Left {
+                    node.Parent.Left = nil
+                } else {
+                    node.Parent.Right = nil
+                }
+
+            }
             break
         }
     }
