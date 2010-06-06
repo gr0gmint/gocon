@@ -1,5 +1,6 @@
 package main
 
+import "container/vector"
 
 type Broadcast struct {
     Data map[string]interface{}
@@ -15,7 +16,7 @@ type BroadcastServer struct {
 }
 func (r *BroadcastServer) Main() {
     r.NumFilters = 0
-    r.Filters = make(*Filter, 1000)[0:1]
+    r.Filters = new(Vector)
     m := <- r.Chan 
     switch  {
         case m.MsgType == "broadcast":

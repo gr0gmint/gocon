@@ -2,7 +2,7 @@ package main
 
 import "./pwan"
 import "fmt"
-import "gocon"
+import . "gocon"
 
 type InitProtoHandler struct {
     ProtoHandler

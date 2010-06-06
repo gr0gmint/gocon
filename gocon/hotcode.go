@@ -10,7 +10,7 @@ package gocon
 
 
 type Hot interface { //Hot code "swapping"
-    Unpack(interface{}) 
+    Unpack(map[string]interface{})
 }
 type NamedHot interface {
     Hot
@@ -31,22 +31,22 @@ func (this *GenericHot) Unpack(data map[string]interface{}) {
 }
 type HotRoutine struct {
     Routine
-    HotChan chan *Hot
+    HotChan chan Hot
     hotlock bool
 }
-func (this *HotRoutine) queryHot(h *GenericHot) {
+func (this *HotRoutine) queryHot(h Hot) {
     if !this.hotlock {
-        go func() { this.Chan<-h; }()
+        go func() { this.HotChan<-h; }()
     } else { //We're already in another hot, which means the hot called another hot
         shared := make(map[string]interface{})
         shared["self"] = h
-        go h.F(shared)
+        go h.Unpack(shared)
     }
 
 }
 
 func (this *HotRoutine) HotStart() {
-    this.HotChan = make(chan *Hot)
+    this.HotChan = make(chan Hot)
     for {
         h := <-this.HotChan
         shared := make(map[string]interface{})
