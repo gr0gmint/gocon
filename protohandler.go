@@ -4,15 +4,44 @@ import "os"
 import "goprotobuf.googlecode.com/hg/proto"
 import "./pwan"
 
-type ProtoHandler struct {
+
+type InitProtoHandler struct {
     Routine
     ProtoHandler *net.Conn
     Player *Player
     Buffer []byte
     headersize int
 }
-type 
+type ProtoProxy struct {
+    HotRoutine
+    Default *ProtoHandler
+    Handlers map[string]*ProtoHandler   
+}
+func NewProtoProxy(conn *net.Conn, def *ProtoHandler) {
+    p := new(ProtoProxy)
+    p.Conn = conn
+    p.Default = def
+    p.Handlers = make(map[string]*ProtoHandler)
+}
 
+func (this *ProtoProxy) AddHandler(name string, handler *ProtoHandler) {
+    h := NewHot(func(shared map[string]interface{}){
+        //self := shared["self"].(*GenericHot)
+        this.Handlers[name] = handler
+    })
+    this.queryHot(h)
+}
+func (this *ProtoProxy) Main() {
+    this.Init()
+    go this.Start()
+    for {
+        
+    }
+}
+
+type ProtoHandler interface {
+    Handle(interface{})
+}
 
 func NewProtoHandler(c *Conn) *ProtoHandler {
     p := new(ProtoHandler)
@@ -102,9 +131,7 @@ func (this *ProtoHandler) Init {
     p.Buffer := make([]byte, 10000)
 }
 
-type InitProtoHandler struct {
-    ProtoHandler
-}
+
 
 func (this *InitProtoHandler) Main() {
     this.Init()

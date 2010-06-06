@@ -3,8 +3,17 @@ package main
 import "rand"
 import . "gocon"
 
+/**********TEMPLATE FOR HOT FUNCTION*********
+    h := NewHot(func(shared map[string]interface{}){
+        self := shared["self"].(*GenericHot)
+    })
+    this.queryHot(h)
+    answer:=<-h.Answer
+*********************************************/
+
+
 type Hot interface { //Hot code "swapping"
-    Unpack(interface{}) int
+    Unpack(*Hot,interface{}) 
 }
 type NamedHot interface {
     Hot
@@ -32,15 +41,40 @@ func (e *HotPlayerJoin) Unpack(shared map[string]interface{})  int {
     return 0
 }
 type GenericHot struct {
-    F func(interface{})
+    F func(map[string]interface{})
     Answer chan *Message
 }
-func NewHot(f func(interface{})) *GenericHot {
+func NewHot(f func(map[string]interface{})) *GenericHot {
     h := new(GenericHot)
     h.F = f
     h.Answer = make(chan *Message)
     return h
 }
-func (this *GenericHot) Unpack(data interface{}) {
+func (this *GenericHot) Unpack(data map[string]interface{}) {
     F(data)
+}
+type HotRoutine struct {
+    Routine
+    HotChan chan *Hot
+}
+func (r *HotRoutine) queryHot(h *Hot) {
+    if !this.hotlock {
+        go func() { this.Chan<-h; }()
+    } else { //We're already in another hot, which means the hot called another hot
+        shared := make(map[string]interface{})
+        shared["self"] = h
+        go h.F(shared)()
+    }
+
+}
+
+func (this *HotRoutine) Start() {
+    this.HotChan := make(chan *Hot)
+    for {
+        h := <-this.HotChan
+        shared := make(map[string]interface{})
+        shared["self"] = h
+        h.Unpack(shared)
+
+    }
 }

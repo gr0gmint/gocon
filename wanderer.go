@@ -75,7 +75,7 @@ func (w *World) GetCoord(x,y int) *Coord {
 }
 
 type WorldHandler struct {
-    Routine
+    HotRoutine
     World *World
     hotlock bool
 }
@@ -84,39 +84,14 @@ type Player struct {
     Name string
     PRoutine *Routine
 }
-func (r *WorldHandler) queryHot(h *Hot) {
-    m := NewMessage()
-    m.Key = "hot"
-    m.Data["hot"] = h
-    if !this.hotlock {
-        go func() { this.Chan<-m; }()
-    } else {
-        go h.F(nil)
-    }
 
-}
-func (r *WorldHandler) Main()  {
-    r.Name =  "worldhandler"
-    r.Register()
-    r.Init()
-    r.World = NewWorld()
-
-
-    var m  *Message
-    var rchan chan *Message
-    for {
-        m,_ = r.ReceiveMessage()
-        msgtype := m.Key
-        switch {
-            case msgtype == "hot":
-                e := m.Data["hot"].(*Hot)
-                shared := make(map[string]interface{})
-                shared["world"] = r
-                e.Unpack(shared)
-            //case msgtype == "rpc":
-            //    rpc := m.Data["rpc"].(*RPC)                
-        }    
-    }
+func (this *WorldHandler) Main()  {
+    this.Name =  "worldhandler"
+    this.Register()
+    this.Init()
+    this.World = NewWorld()
+    go this.Start()
+    
 }
 const (
     DIRECTION_UP = iota
@@ -124,11 +99,21 @@ const (
     DIRECTION_LEFT
     DIRECTION_RIGHT
 )
-func (this *WorldHandler) PlayerPlace(player *Playetr, coord *Coord) bool {
+func (this *WorldHandler) PlayerPlace(player *Player, coord *Coord) bool {
+    h := NewHot(func(i interface{}) {
+        m := NewMessage()
+        if this.World.PlacePlayer(player,coord) {
+            m.Key = "accepted"
+        } else {
+            m.Key = "declined"
+        }
+        
+    })
+    
 }
 func (this *WorldHandler) PlayerMove(player *Player, direction int) bool {
-    h:=NewHot(func(data interface{}){
-            this.hotlock = true //Against deadlocks (if a hot calls another hot -_- )
+    h:=NewHot(func(data map[string]interface{}){
+            self := data["self"].(*GenericHot)
             var dirx,diry = 0,0
             switch {
                 case e.direction == DIRECTION_UP:
@@ -156,11 +141,10 @@ func (this *WorldHandler) PlayerMove(player *Player, direction int) bool {
                     m.Key = "declined"
                 }
             }
-            this.Answer<-m
-            this.hotlock = false
+            self.Answer<-m
     })
 
-        this.qeuryHot(h)
+        this.queryHot(h)
 
     m := <-h.Answer
     if m.Key == "accepted" { return true; }
@@ -181,8 +165,8 @@ func (r *Server) Main() {
     for {
         conn,err := listener.AcceptTCP()
         if !err {
-            NewProtoHandler(conn)
-            go NewProtoHandler.Main()
+            proxy := NewProtoProxy(conn)
+            go proxy.Main()
         }
     }   
 }
