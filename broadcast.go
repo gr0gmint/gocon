@@ -11,36 +11,39 @@ func NewBroadcast () {
 }
 
 type BroadcastServer struct {
-    Routine
-    Filters []*Filter 
+    HotRoutine
+    Filters  *Vector 
 }
-func (r *BroadcastServer) Main() {
-    r.NumFilters = 0
-    r.Filters = new(Vector)
-    m := <- r.Chan 
-    switch  {
-        case m.MsgType == "broadcast":
-            //Handle the broadcast
-        case m.MsgType == "hot":
-            shared := make(map[string]interface{})
-            shared["b"] = r
-            h := m.Data["hot"].(*Hot)
-            h.Unpack(shared)
-    }
+
+type (*this BroadcastServer) Setup() {
+    
 }
-type HotBroadcastServerAddFilter struct {
-       Filter *Filter
-}
-type (*h HotBroadCastServerAddFilter) Unpack(shared map[string]interface{}) int {
-    b := shared["b"].(*BroadcastServer)
-    numfilters := len(b.Filters)
-    b.Filters = b.Filters[0:numfilters+1]
-    b.Filters[numfilters] = h.Filter
-    return 0
+
+type (*this BroadcastServer) AddFilter(filter *Filter) {
+    this.Filters.Append(filter)
 }
 
 func NewBroadcastServer() *BroadcastServer {
     b := new(BroadcastServer)
     b.Init()
     return b
+}
+
+func (this *BroadcastServer) Main() {
+    go this.HotStart()
+    this.Filters = new(Vector)
+    for {
+        m := <- r.Chan 
+        switch  {
+            case m.MsgType == "broadcast":
+                
+        }
+    }
+}
+
+func (this *BroadcastServer) Broadcast(b *Broadcast) {
+    c := this.Filters.Iter()
+    for { filter.(*Filter),ok := <-c; if !ok {break;}
+         filer.ParseBroadcast(b)
+    }
 }
