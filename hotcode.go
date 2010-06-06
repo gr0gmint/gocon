@@ -68,7 +68,7 @@ func (r *HotRoutine) queryHot(h *Hot) {
 
 }
 
-func (this *HotRoutine) Start() {
+func (this *HotRoutine) HotStart() {
     this.HotChan := make(chan *Hot)
     for {
         h := <-this.HotChan

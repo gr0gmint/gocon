@@ -17,27 +17,42 @@ const (
 )
 
 
+type WorldHandler struct {
+    HotRoutine
+    World *World
+    hotlock bool
+}
+
+type Player struct {
+    Name string
+    PRoutine *Routine
+}
 
 type Coord struct {
     X,Y int
     Data map[string]interface{}
 }
 
-func (c *Coord) Players() map[string]*Player {
-    return c.Data["players"].(map[string]*Player)
+type World struct {
+    Coords [WORLD_SIZE_X][WORLD_SIZE_Y] Coord
+    PlayerIndex map[*Player]*Coord
 }
 
 
-
+type Server struct {
+    Routine   
+}
 
 
 var BServer = NewBroadcastServer()
 
 
-type World struct {
-    Coords [WORLD_SIZE_X][WORLD_SIZE_Y] Coord
-    PlayerIndex map[*Player]*Coord
+
+func (c *Coord) Players() map[string]*Player {
+    return c.Data["players"].(map[string]*Player)
 }
+
+
 func NewWorld () *World {
     world := new(World)
 
@@ -74,23 +89,13 @@ func (w *World) GetCoord(x,y int) *Coord {
     return &w.Coords[x+y*WORLD_SIZE_X]
 }
 
-type WorldHandler struct {
-    HotRoutine
-    World *World
-    hotlock bool
-}
-
-type Player struct {
-    Name string
-    PRoutine *Routine
-}
 
 func (this *WorldHandler) Main()  {
     this.Name =  "worldhandler"
     this.Register()
     this.Init()
     this.World = NewWorld()
-    go this.Start()
+    go this.HotStart()
     
 }
 const (
@@ -153,10 +158,6 @@ func (this *WorldHandler) PlayerMove(player *Player, direction int) bool {
 }
 
 
-type Server struct {
-    Routine   
-}
-
 func (r *Server) Main() { 
     laddr := new (net.TCPAddr)
     laddr.IP = net.ResolveTCPAddr("0.0.0.0")
@@ -166,6 +167,8 @@ func (r *Server) Main() {
         conn,err := listener.AcceptTCP()
         if !err {
             proxy := NewProtoProxy(conn)
+            inithandler := NewInitProtoHandler()
+            proxy.SetDefault(inithandler)
             go proxy.Main()
         }
     }   

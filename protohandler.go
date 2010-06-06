@@ -16,6 +16,26 @@ type ProtoFilter interface {
      Check(header *pwan.Header) bool
 }
 
+type ProtoHandler struct {
+    HotRoutine
+    Proxy *ProtoProxy
+    
+}
+type IProtoHandler interface {
+    Handle([]byte)
+}
+
+
+type InitProtoHandler struct {
+    ProtoHandler
+    Queue chan []byte
+}
+
+type InWorldProtoHandler struct {
+    ProtoHandler
+}
+
+
 func (this *ProtoProxy) Init() {
     temphdr := pwan.NewHeader()
     temphdr.Size = 0xf00
@@ -23,7 +43,7 @@ func (this *ProtoProxy) Init() {
     this.headersize = len(data)
     this.Buffer := make([]byte, 10000)
     this.SBuffer := make([]byte, 10000)
-    go this.Start()
+    go this.HotStart()
     p.Handlers = make(map[string]*IProtoHandler)
 }
 
@@ -37,6 +57,9 @@ func NewProtoProxy(conn *net.Conn, def *IProtoHandler) *ProtoProxy {
 
 func (this *ProtoProxy) AddHandler(name string, handler *IProtoHandler) {
     this.Handlers[name] = handler
+}
+func (this *ProtoProxy) SetDefault(def *IProtoHandler) {
+    this.Default = def
 }
 func (this *ProtoProxy) RemoveHandler(name string) {
     this.Handlers[name] = nil
@@ -98,21 +121,7 @@ func (this *ProtoProxy) Main() {
     }
 }
 
-type ProtoHandler struct {
-    HotRoutine
-    Proxy *ProtoProxy
-    
-}
 
-type InitProtoHandler struct {
-    GenericProtoHandler
-}
-
-func NewInitProtoHandler(p *ProtoProxy) *InitProtoHandler {
-    p := new(ProtoHandler)
-    p.Proxy = p
-    return p
-}
 
 
 
@@ -131,29 +140,46 @@ func (this *ProtoHandler) Declinebool() {
 
 
 
+
+
+
+
+
+
+
+func NewInitProtoHandler(p *ProtoProxy) *InitProtoHandler {
+    h := new(ProtoHandler)
+    h.Proxy = p
+    h.Queue = make(chan []byte)
+    h.Init()
+    return h
+}
+
+func (this *InitProtoHandler) Handle(data []byte
+    this.Queue <- data
+}
+
 func (this *InitProtoHandler) Main() {
-    this.Init()
+        data := <-this.Queue 
+            joinmsg := pwan.NewClientJoin()
     
-    joinmsg := pwan.NewClientJoin()
-    if header, _, err := this.RecvMsg(joinmsg); err {
-        this.Conn.Close()
-        return
-    } else {
-        this.Player = NewPlayer()
-        this.Player.Name = joinmsg.Playername
-        
-        worldhandler := GlobalRoutines["worldhandler"].(*WorldHandler)
-        worldhandler.PlacePlayer(this.Player, world.GetCoord(50,50))
-        inworldhandler := new(InWorldProtoHandler)
-        inworldhandler.Conn = this.Conn
-        go inworldhandler.Main()
-    }
+        if header, _, err := this.RecvMsg(joinmsg); err {
+            this.Conn.Close()
+            return
+        } else {
+            this.Player = NewPlayer()
+            this.Player.Name = joinmsg.Playername
+            
+            worldhandler := GlobalRoutines["worldhandler"].(*WorldHandler)
+            worldhandler.PlacePlayer(this.Player, world.GetCoord(50,50))
+            inworldhandler := new(InWorldProtoHandler)
+            inworldhandler.Conn = this.Conn
+            go inworldhandler.Main()
+
+        }
     
 }   
 
-type InWorldProtoHandler struct {
-    ProtoHandler
-}
 func (this *InWorldProtoHandler) Cleanup () {
     //remove player from world
 }
