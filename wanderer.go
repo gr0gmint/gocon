@@ -4,9 +4,7 @@ import . "gocon"
 import "rand"
 import "time"
 import "net"
-import "os"
-import "reflect"
-
+//import "os"
 
 /* TODO:
      save to db */
@@ -39,7 +37,7 @@ type World struct {
 }
 
 
-type Server struct {
+type Listener struct {
     Routine   
 }
 
@@ -86,7 +84,7 @@ func (w *World) PlacePlayer(player *Player, c *Coord)  bool {
     return true
 }
 func (w *World) GetCoord(x,y int) *Coord {
-    return &w.Coords[x+y*WORLD_SIZE_X]
+    return &w.Coords[x][y]
 }
 
 
@@ -105,33 +103,36 @@ const (
     DIRECTION_RIGHT
 )
 func (this *WorldHandler) PlayerPlace(player *Player, coord *Coord) bool {
-    h := NewHot(func(i interface{}) {
+    h := NewHot(func(data map[string]interface{}) {
+        self := data["self"].(*GenericHot)
         m := NewMessage()
         if this.World.PlacePlayer(player,coord) {
             m.Key = "accepted"
         } else {
             m.Key = "declined"
         }
-        
+        self.Answer<-m
     })
-    
+    answer := <-h.Answer
+    if answer.Key == "declined" {return false}
+    return true
 }
 func (this *WorldHandler) PlayerMove(player *Player, direction int) bool {
     h:=NewHot(func(data map[string]interface{}){
             self := data["self"].(*GenericHot)
             var dirx,diry = 0,0
             switch {
-                case e.direction == DIRECTION_UP:
+                case direction == DIRECTION_UP:
                     diry += 1
-                case e.direction == DIRECTION_DOWN:
+                case direction == DIRECTION_DOWN:
                     diry -= 1
-                case e.direction == DIRECTION_LEFT:
+                case direction == DIRECTION_LEFT:
                     dirx -= 1
-                case e.direction == DIRECTION_RIGHT:
+                case direction == DIRECTION_RIGHT:
                     dirx += 1
             }
             
-            currentcord := this.PlayerIndex[e.Player]
+            currentcord := this.World.PlayerIndex[player]
 
             m:=NewMessage()
             if currentcord.X+dirx > WORLD_SIZE_X || currentcord.X+dirx < 0 {
@@ -139,8 +140,8 @@ func (this *WorldHandler) PlayerMove(player *Player, direction int) bool {
             } else if currentcord.Y + diry > WORLD_SIZE_Y || currentcord.Y+diry < 0 {
                 m.Key = "declined"
             } else {    
-                newcoord := world.GetCoord(currentcord.X+dirx, currentcord.Y+diry)
-                if world.PlacePlayer(e.Player, newcoord) {
+                newcoord := this.World.GetCoord(currentcord.X+dirx, currentcord.Y+diry)
+                if this.World.PlacePlayer(player, newcoord) {
                     m.Key = "accepted"
                 } else {
                     m.Key = "declined"
@@ -149,7 +150,7 @@ func (this *WorldHandler) PlayerMove(player *Player, direction int) bool {
             self.Answer<-m
     })
 
-        this.queryHot(h)
+        this.QueryHot(h)
 
     m := <-h.Answer
     if m.Key == "accepted" { return true; }
@@ -158,16 +159,17 @@ func (this *WorldHandler) PlayerMove(player *Player, direction int) bool {
 }
 
 
-func (r *Server) Main() { 
-    laddr := new (net.TCPAddr)
-    laddr.IP = net.ResolveTCPAddr("0.0.0.0")
-    laddr.Port = 7777
-    listener := net.ListenTCP("tcp", laddr)
+func (r *Listener) Main() { 
+    //var err *os.Error
+    laddr, _ := net.ResolveTCPAddr("0.0.0.0:7777")
+    listener, _ := net.ListenTCP("tcp", laddr)
     for {
         conn,err := listener.AcceptTCP()
-        if !err {
+        if err ==nil {
+        
             proxy := NewProtoProxy(conn)
-            inithandler := NewInitProtoHandler()
+            inithandler := NewInitProtoHandler(proxy)
+
             proxy.SetDefault(inithandler)
             go proxy.Main()
         }
@@ -180,7 +182,7 @@ func main() {
     worldhandler := new(WorldHandler)
     go worldhandler.Main()
 
-   server := new(Server)
-   server.Init()
+   server := new(Listener)
+   //server.Init()
    server.Main()  
 }

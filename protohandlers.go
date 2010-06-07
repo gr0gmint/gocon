@@ -1,8 +1,9 @@
 package main
 
-import "./pwan"
 import "fmt"
 import . "gocon"
+import "goprotobuf.googlecode.com/hg/proto"
+
 
 type InitProtoHandler struct {
     ProtoHandler
@@ -20,8 +21,8 @@ type InWorldProtoHandler struct {
 
 func NewInitProtoHandler(p *ProtoProxy) *InitProtoHandler {
     h := new(InitProtoHandler)
-    h.Proxy = p
     h.Queue = make(chan []byte)
+    h.Proxy = p
     h.Init()
     return h
 }
@@ -32,7 +33,7 @@ func (this *InitProtoHandler) Handle(data []byte) {
 
 func (this *InitProtoHandler) Main() {
         data := <-this.Queue
-        joinmsg := pwan.NewClientJoin() 
+        joinmsg := NewClientJoin() 
         proto.Unmarshal(data, joinmsg)
         fmt.Printf("%s\n",joinmsg.Playername)
     /*

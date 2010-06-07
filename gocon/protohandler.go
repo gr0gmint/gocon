@@ -8,9 +8,9 @@ type ProtoProxy struct {
     HotRoutine
     Buffer []byte
     SBuffer []byte
-    Conn *net.Conn
+    Conn *net.TCPConn
     Default *IProtoHandler
-    Handlers map[string]*IProtoHandler  
+    Handlers map[string]IProtoHandler  
     headersize int
     Filter *ProtoFilter
 }
@@ -35,22 +35,21 @@ func (this *ProtoProxy) Init() {
     this.Buffer = make([]byte, 10000)
     this.SBuffer = make([]byte, 10000)
     go this.HotStart()
-    this.Handlers = make(map[string]*IProtoHandler)
+    this.Handlers = make(map[string]IProtoHandler)
 }
 
-func NewProtoProxy(conn *net.Conn, def *IProtoHandler) *ProtoProxy {
+func NewProtoProxy(conn *net.TCPConn) *ProtoProxy {
     p := new(ProtoProxy)
     p.Conn = conn
-    p.Default = def
     p.Init()
     return p
 }
 
-func (this *ProtoProxy) AddHandler(name string, handler *IProtoHandler) {
+func (this *ProtoProxy) AddHandler(name string, handler IProtoHandler) {
     this.Handlers[name] = handler
 }
-func (this *ProtoProxy) SetDefault(def *IProtoHandler) {
-    this.Default = def
+func (this *ProtoProxy) SetDefault(def IProtoHandler) {
+    this.Default = &def
 }
 func (this *ProtoProxy) RemoveHandler(name string) {
     this.Handlers[name] = nil
@@ -96,7 +95,7 @@ func (this *ProtoProxy) Send(data []byte, handlername string) {
         copy(this.SBuffer[hdrlen:hdrlen+len(data)], data)
         this.Conn.Write(this.SBuffer[0:hdrlen+len(data)])
     })
-    this.queryHot(h)
+    this.QueryHot(h)
 
 }
 

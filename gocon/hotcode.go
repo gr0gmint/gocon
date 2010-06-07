@@ -34,7 +34,7 @@ type HotRoutine struct {
     HotChan chan Hot
     hotlock bool
 }
-func (this *HotRoutine) queryHot(h Hot) {
+func (this *HotRoutine) QueryHot(h Hot) {
     if !this.hotlock {
         go func() { this.HotChan<-h; }()
     } else { //We're already in another hot, which means the hot called another hot

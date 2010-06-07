@@ -1,6 +1,7 @@
 package main
 
-import "container/vector"
+import . "gocon"
+import . "container/vector"
 
 type Broadcast struct {
     Data map[string]interface{}
@@ -15,12 +16,12 @@ type BroadcastServer struct {
     Filters  *Vector 
 }
 
-type (*this BroadcastServer) Setup() {
+func    (this *BroadcastServer) Setup() {
     
 }
 
-type (*this BroadcastServer) AddFilter(filter *Filter) {
-    this.Filters.Append(filter)
+func (this *BroadcastServer) AddFilter(filter *Filter) {
+    this.Filters.Push(filter)
 }
 
 func NewBroadcastServer() *BroadcastServer {
@@ -33,9 +34,9 @@ func (this *BroadcastServer) Main() {
     go this.HotStart()
     this.Filters = new(Vector)
     for {
-        m := <- r.Chan 
+        m := <- this.Chan 
         switch  {
-            case m.MsgType == "broadcast":
+            case m.Key == "broadcast":
                 
         }
     }
@@ -43,7 +44,7 @@ func (this *BroadcastServer) Main() {
 
 func (this *BroadcastServer) Broadcast(b *Broadcast) {
     c := this.Filters.Iter()
-    for { filter.(*Filter),ok := <-c; if !ok {break;}
-         filer.ParseBroadcast(b)
+    for { filter,ok := <-c; if !ok {break;}
+         filter.(*Filter).ParseBroadcast(b)
     }
 }

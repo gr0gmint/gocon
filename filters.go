@@ -1,13 +1,13 @@
 package main
 
 
-import "math"
 import . "container/vector"
 
 type Interval struct {
-    Śtart, Stop int
+    Start int
+    Stop int
     Sibling *Interval
-    Data interface{}
+    Data map[string]interface{}
 }
 
 
@@ -32,9 +32,10 @@ func (c *CenterNode) searchNodeForPoint(point int, acc_chan chan *Interval) {
     if point >= c.MaxIntervalStart && point <= c.MaxIntervalStop {
         c := c.Intervals.Iter()
         for {
-           if i.(*Interval) ,ok := <-c; ok {
-                if i.Start <=  point && i.Stop >= point {
-                    acc_chan <- i
+           if i ,ok := <-c; ok {
+                interval := i.(*Interval)
+                if interval.Start <=  point && interval.Stop >= point {
+                    acc_chan <- interval
                 }
            } else {  break }
             
@@ -77,7 +78,7 @@ func (c *CenterNode) RemoveInterval(interval *Interval) {
 }
 
 func (c *CenterNode) AddInterval(interval *Interval) {
-    if start <= c.Point && stop >= c.Point {
+    if interval.Start <= c.Point && interval.Stop >= c.Point {
         if c.Intervals == nil {
             c.Intervals = new(Vector)
         }  
@@ -119,7 +120,7 @@ func (c *CenterTree) FindIntervals(point int) *Vector /* *Interval */ {
 func (c *CenterTree) AddInterval(interval *Interval) {
     c.Top.AddInterval(interval)
 }
-func NewCenterTree(start,stop int) *BinaryTree {
+func NewCenterTree(start,stop int) *CenterTree {
     btree := new(CenterTree)
     btree.Start = start
     btree.Stop = stop
@@ -127,9 +128,7 @@ func NewCenterTree(start,stop int) *BinaryTree {
     btree.Top.Point = (stop+start)/2 
     btree.NodeMap = make(map[*Interval]*CenterNode)
     
-    
-    order := (int)(math.Log10(base)/math.Log10(0.5))
-
+    return btree
 }
 
 type Filter interface {
@@ -137,26 +136,22 @@ type Filter interface {
 }
 
 type FilterPlayer struct {
-    PlFilterMap map[*Player]([]*Filter)
+    PlFilterMap map[*Player]*Filter
 }
-func NewFilterPlayer() *FilterPlayer struct {
+func NewFilterPlayer() *FilterPlayer {
     f := new(FilterPlayer)
-    f.PlFilterMap = make(map[*Player]([]*Filter))
+    f.PlFilterMap = make(map[*Player]*Filter)
+    return f
 }
-func (f *FilterPlayer) AddFilter(player *Player, filter *Filter) {
-    m := &f.PlFilterMap
-    if filterlist,ok := m[player]; !ok {
-        filterlist := make(*Filter,1000)[0:1]
-        m[player] = filterlist
-    } else {
-        m[player] = m[player][0:len(m)+1] 
-    }
-    m[player][len(m[player])] = filter
+func (f *FilterPlayer) SetFilter(player *Player, filter *Filter) {
+    m := f.PlFilterMap
+    m[player] = filter
     
 }
 func (f *FilterPlayer) ParseBroadcast(b *Broadcast) {
     player := b.Data["player"].(*Player)
     if filter, ok := f.PlFilterMap[player]; ok {
+    
         filter.ParseBroadcast(b)
     }
 }
@@ -167,20 +162,19 @@ type FilterDistanceFromPlayer struct {
 }
 func NewFilterDistanceFromPlayer() *FilterDistanceFromPlayer {
     f := new(FilterDistanceFromPlayer)
-    f.XTree = NewCenterTree(0, WORLDSIZE_X)
+    f.XTree = NewCenterTree(0, WORLD_SIZE_X)
     return f
-}
 
 }
 func FindOverlapping(v *Vector, coord *Coord) *Vector { 
     c := v.Iter()
     overlapping := new(Vector)
     for {
-        if i.(*Interval), ok := <-c; !ok {
-            break
-        }
-        if i.Sibling.Start <= coord.X && i.Sibling.Stop >= coord.Y {
-            overlapping.Push(i)
+        i, ok := <-c
+        if !ok { break; }
+        in := i.(*Interval)
+        if in.Sibling.Start <= coord.X && in.Sibling.Stop >= coord.Y {
+            overlapping.Push(in)
         }
     }
     return overlapping
@@ -192,13 +186,15 @@ func (f *FilterDistanceFromPlayer) ParseBroadcast(b *Broadcast) {
     overlapping := FindOverlapping(v_intervalsx, coord)   
     c := overlapping.Iter()
     for {
-        if i.(*Interval), ok := <-c; !ok { break; }
-        filter := i.Data["filter"].(*Filter)
+        i, ok := <-c
+        if !ok { break; }
+        in := i.(*Interval)
+        filter := in.Data["filter"].(*Filter)
         go filter.ParseBroadcast(b)
     }
     
 }
-func (f *FilterDistanceFromPlayer) AddFilter(startX,stopX,startY,stopY int, f *Filter) {
+func (f *FilterDistanceFromPlayer) AddFilter(startX,stopX,startY,stopY int, filter *Filter) {
     intervalX := new(Interval)
     intervalY := new(Interval)
     intervalX.Sibling = intervalY
@@ -207,6 +203,6 @@ func (f *FilterDistanceFromPlayer) AddFilter(startX,stopX,startY,stopY int, f *F
     intervalY.Start = startY
     intervalY.Stop = stopY
     
-    intervalX.Data["filter"] = f
+    intervalX.Data["filter"] = filter
     f.XTree.AddInterval(intervalX)  
 }

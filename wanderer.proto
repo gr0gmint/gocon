@@ -34,11 +34,6 @@ message Client {
     }
 }
 
-message Header {
-    required int32 size = 1;
-    required int32 type = 2;
-    optional string handler = 3;
-}
 
 message ClientJoin {
     required string playername = 1;
