@@ -4,6 +4,7 @@ import . "gocon"
 import "rand"
 import "time"
 import "net"
+import "fmt"
 //import "os"
 
 /* TODO:
@@ -161,8 +162,16 @@ func (this *WorldHandler) PlayerMove(player *Player, direction int) bool {
 
 func (r *Listener) Main() { 
     //var err *os.Error
-    laddr, _ := net.ResolveTCPAddr("0.0.0.0:7777")
-    listener, _ := net.ListenTCP("tcp", laddr)
+    laddr, err := net.ResolveTCPAddr("0.0.0.0:7777")
+    if err != nil {
+        fmt.Printf("%s\n", err)
+        return
+    }
+    listener, err := net.ListenTCP("tcp", laddr)
+    if err != nil {
+        fmt.Printf("%s\n", err)
+        return
+    }
     for {
         conn,err := listener.AcceptTCP()
         if err ==nil {
@@ -172,6 +181,9 @@ func (r *Listener) Main() {
 
             proxy.SetDefault(inithandler)
             go proxy.Main()
+        } else {
+            fmt.Printf("%s\n", err)
+            return
         }
     }   
 }
@@ -183,6 +195,6 @@ func main() {
     go worldhandler.Main()
 
    server := new(Listener)
-   //server.Init()
+   
    server.Main()  
 }

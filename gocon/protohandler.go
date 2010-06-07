@@ -3,6 +3,8 @@ package gocon
 import "os"
 import "goprotobuf.googlecode.com/hg/proto"
 import "net"
+import "fmt"
+
 
 type ProtoProxy struct {
     HotRoutine
@@ -29,19 +31,21 @@ type IProtoHandler interface {
 
 func (this *ProtoProxy) Init() {
     temphdr := NewHeader()
-    *temphdr.Size = 4123
+    temphdr.Size = proto.Int32(4831)
     data, _ := proto.Marshal(temphdr)
     this.headersize = len(data)
     this.Buffer = make([]byte, 10000)
     this.SBuffer = make([]byte, 10000)
-    go this.HotStart()
+    
     this.Handlers = make(map[string]IProtoHandler)
+    go this.HotStart()
 }
 
 func NewProtoProxy(conn *net.TCPConn) *ProtoProxy {
     p := new(ProtoProxy)
     p.Conn = conn
     p.Init()
+    go p.HotStart()
     return p
 }
 
@@ -75,7 +79,7 @@ func (this *ProtoProxy) readMsg() (*Header,[]byte, os.Error) {
 
     //Read header first
     data,err := this.Read(this.headersize)
-    if err != nil  {
+    if err == nil  {
         header := NewHeader()
         proto.Unmarshal(data, header)
         data,err := this.Read(int(*header.Size))
@@ -85,16 +89,18 @@ func (this *ProtoProxy) readMsg() (*Header,[]byte, os.Error) {
 } 
 func (this *ProtoProxy) Send(data []byte, handlername string) {
     h := NewHot(func(shared map[string]interface{}){
+        fmt.Printf("inside hot\n")
         //self := shared["self"].(*GenericHot)
         header := NewHeader()
-        *header.Handler = handlername
-        *header.Size = int32(len(data))
+        header.Handler = proto.String(handlername)
+        header.Size = proto.Int(len(data))
         hdrdata,_ := proto.Marshal(header)
         hdrlen := len(hdrdata)
         copy(this.SBuffer[0:hdrlen], hdrdata)
         copy(this.SBuffer[hdrlen:hdrlen+len(data)], data)
         this.Conn.Write(this.SBuffer[0:hdrlen+len(data)])
     })
+    fmt.Printf("DEBUG: querying hot\n")
     this.QueryHot(h)
 
 }
@@ -103,13 +109,15 @@ func (this *ProtoProxy) Send(data []byte, handlername string) {
 func (this *ProtoProxy) Main() {
     this.Init()
     for {
-        header, data, err := this.readMsg(); 
-        if err == nil {
+        data, err := this.Read(0); 
+        if err != nil {
             this.Conn.Close()
+            fmt.Printf("\nConnection closed\n")
             return
 
         } else {
-            this.Handlers[*header.Handler].Handle(data)
+            fmt.Printf("%s",data );
+            
         }
         
     }
