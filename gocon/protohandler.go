@@ -4,15 +4,25 @@ import "os"
 import "goprotobuf.googlecode.com/hg/proto"
 import "net"
 import "fmt"
+import binary "encoding/binary"
 
+type Buf []byte
+func (b Buf) Write(p []byte) (int, os.Error) {
+    copy(b,p)
+    return len(p), nil
+}
+func (b Buf) Read(p []byte) (int, os.Error) {
+    copy(p,b)
+    return len(b), nil
+}
 
 type ProtoProxy struct {
     HotRoutine
-    Buffer []byte
-    SBuffer []byte
+    Buffer Buf
+    SBuffer Buf
     Conn *net.TCPConn
     Default *IProtoHandler
-    Handlers map[string]IProtoHandler  
+    Handlers map[int]IProtoHandler  
     headersize int
     Filter *ProtoFilter
 }
@@ -32,12 +42,17 @@ type IProtoHandler interface {
 func (this *ProtoProxy) Init() {
     temphdr := NewHeader()
     temphdr.Size = proto.Int32(4831)
-    data, _ := proto.Marshal(temphdr)
+    temphdr.Type = proto.Int32(0)
+    temphdr.Port = proto.Int32(0)
+    data, err := proto.Marshal(temphdr)
+    if err != nil {
+        fmt.Printf("E: Couldn't marshal header\n")
+    }
     this.headersize = len(data)
     this.Buffer = make([]byte, 10000)
     this.SBuffer = make([]byte, 10000)
     
-    this.Handlers = make(map[string]IProtoHandler)
+    this.Handlers = make(map[int]IProtoHandler)
     go this.HotStart()
 }
 
@@ -49,58 +64,78 @@ func NewProtoProxy(conn *net.TCPConn) *ProtoProxy {
     return p
 }
 
-func (this *ProtoProxy) AddHandler(name string, handler IProtoHandler) {
-    this.Handlers[name] = handler
+func (this *ProtoProxy) AddHandler(port int, handler IProtoHandler) {
+    this.Handlers[port] = handler
 }
 func (this *ProtoProxy) SetDefault(def IProtoHandler) {
     this.Default = &def
 }
-func (this *ProtoProxy) RemoveHandler(name string) {
-    this.Handlers[name] = nil
+func (this *ProtoProxy) RemoveHandler(port int) {
+    this.Handlers[port] = nil
 }
 
-func (this *ProtoProxy) Read (size int) ([]byte, os.Error) {
-    
-    if size <= 0 {
-        n,err := this.Conn.Read(this.Buffer)
+func (this *ProtoProxy) Read (buf Buf) (Buf, os.Error) {
+    if buf == nil {
+        n,err := this.Conn.Read(buf)
         return this.Buffer[0:n], err 
     } 
-    var total int
-    for ; total < size; {
-            n, err := this.Conn.Read(this.Buffer[total:size])
+    var total int = 0
+    buflen := len(buf)
+    for ; total < buflen; {
+            n, err := this.Conn.Read(this.Buffer[total:buflen])
+            fmt.Printf("read %d bytes\n", n)
             total += n
-            if err !=nil { return this.Buffer[0:total],err }
+            fmt.Printf("total: %d\n",total)
+            if err !=nil { return nil,err }
         }
         
     return this.Buffer[0:total], nil
 }
 
 func (this *ProtoProxy) readMsg() (*Header,[]byte, os.Error) {
-
     //Read header first
-    data,err := this.Read(this.headersize)
-    if err == nil  {
-        header := NewHeader()
-        proto.Unmarshal(data, header)
-        data,err := this.Read(int(*header.Size))
-        return header,data,err
-    } 
-    return nil,nil,err
+    var hdrlen int32
+    var datalen int32
+    data,err := this.Read(this.Buffer[0:8])
+    if err != nil  {
+        return nil,nil,err
+    }
+    fmt.Printf("len(data) = %d\n", len(data))
+    binary.Read(data[0:4], binary.BigEndian, &hdrlen)
+    binary.Read(data[4:8], binary.BigEndian, &datalen)
+    if !(hdrlen < 4096 && datalen < 16000 ) {
+        fmt.Printf("hdrlen=%d, datalen=%d.. Far too high\n", hdrlen, datalen)
+        return nil,nil,os.ENOMEM
+    }
+    hdrdata := make(Buf, hdrlen)
+    newdata := make(Buf, datalen)
+    tmp,err := this.Read(this.Buffer[0:hdrlen])
+    if err != nil {
+        //this.Conn.Close()
+        return nil,nil,err
+    }
+    copy(hdrdata,tmp)
+    header := NewHeader()
+    proto.Unmarshal(hdrdata, header)
+    tmp,err = this.Read(this.Buffer[0:datalen])
+    if err != nil {
+        return nil,nil,err
+    }
+    copy(newdata,tmp)
+    
+    
+    return header, newdata,nil
 } 
-func (this *ProtoProxy) Send(data []byte, handlername string) {
+func (this *ProtoProxy) Send(data []byte, port int32, t int32) {
     h := NewHot(func(shared map[string]interface{}){
         fmt.Printf("inside hot\n")
         //self := shared["self"].(*GenericHot)
-        header := NewHeader()
-        header.Handler = proto.String(handlername)
-        header.Size = proto.Int(len(data))
-        hdrdata,_ := proto.Marshal(header)
-        hdrlen := len(hdrdata)
-        copy(this.SBuffer[0:hdrlen], hdrdata)
-        copy(this.SBuffer[hdrlen:hdrlen+len(data)], data)
-        this.Conn.Write(this.SBuffer[0:hdrlen+len(data)])
+        var datalen int32 = int32(len(data))
+        binary.Write(this.SBuffer, binary.BigEndian, &datalen)
+        copy(this.SBuffer[4:4+len(data)], data)
+        //fmt.Printf("Writing this: [%d]%s\n", len(this.SBuffer[0:hdrlen+len(data)]), this.SBuffer[0:hdrlen+len(data)])
+        this.Conn.Write(this.SBuffer[0:4+len(data)])
     })
-    fmt.Printf("DEBUG: querying hot\n")
     this.QueryHot(h)
 
 }
@@ -109,15 +144,13 @@ func (this *ProtoProxy) Send(data []byte, handlername string) {
 func (this *ProtoProxy) Main() {
     this.Init()
     for {
-        data, err := this.Read(0); 
+        header, data, err := this.readMsg(); 
         if err != nil {
             this.Conn.Close()
             fmt.Printf("\nConnection closed\n")
             return
-
         } else {
-            fmt.Printf("%s",data );
-            
+            fmt.Printf("%s %s\n",header,data)
         }
         
     }

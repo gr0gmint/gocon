@@ -5,9 +5,8 @@ package gocon
 
 
 type Header struct {
-	Size	*int32	"PB(varint,1,req,name=size)"
-	Type	*int32	"PB(varint,2,req,name=type)"
-	Handler	*string	"PB(bytes,3,opt,name=handler)"
+	Type	*int32	"PB(varint,1,req,name=type)"
+	Port	*int32	"PB(varint,2,req,name=port)"
 	XXX_unrecognized	[]byte
 }
 func (this *Header) Reset() {

@@ -21,8 +21,11 @@ func main() {
    
    joinmsg := pwan.NewClientJoin()
    joinmsg.Playername = proto.String("weoijoijasdjf")
-   data,_ := proto.Marshal(joinmsg)
+   data,err := proto.Marshal(joinmsg)
+   if err != nil {
+        fmt.Printf("E: Could not marshal\n")
+        }
    fmt.Printf("%s", data)
-   proxy.Send(data, "dafsdfsf")
-   time.Sleep(10000000)
+   proxy.Send(data, 0, 0)
+   time.Sleep(1000000000)
 }

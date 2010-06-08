@@ -191,8 +191,8 @@ func (r *Listener) Main() {
 
 func main() {
    rand.Seed(time.Nanoseconds())
-    worldhandler := new(WorldHandler)
-    go worldhandler.Main()
+    //worldhandler := new(WorldHandler)
+    //go worldhandler.Main()
 
    server := new(Listener)
    
