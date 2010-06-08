@@ -40,15 +40,6 @@ type IProtoHandler interface {
 }
 
 func (this *ProtoProxy) Init() {
-    temphdr := NewHeader()
-    temphdr.Size = proto.Int32(4831)
-    temphdr.Type = proto.Int32(0)
-    temphdr.Port = proto.Int32(0)
-    data, err := proto.Marshal(temphdr)
-    if err != nil {
-        fmt.Printf("E: Couldn't marshal header\n")
-    }
-    this.headersize = len(data)
     this.Buffer = make([]byte, 10000)
     this.SBuffer = make([]byte, 10000)
     
@@ -103,8 +94,9 @@ func (this *ProtoProxy) readMsg() (*Header,[]byte, os.Error) {
     fmt.Printf("len(data) = %d\n", len(data))
     binary.Read(data[0:4], binary.BigEndian, &hdrlen)
     binary.Read(data[4:8], binary.BigEndian, &datalen)
+            fmt.Printf("hdrlen=%d, datalen=%d\n", hdrlen, datalen)
     if !(hdrlen < 4096 && datalen < 16000 ) {
-        fmt.Printf("hdrlen=%d, datalen=%d.. Far too high\n", hdrlen, datalen)
+
         return nil,nil,os.ENOMEM
     }
     hdrdata := make(Buf, hdrlen)
@@ -130,11 +122,17 @@ func (this *ProtoProxy) Send(data []byte, port int32, t int32) {
     h := NewHot(func(shared map[string]interface{}){
         fmt.Printf("inside hot\n")
         //self := shared["self"].(*GenericHot)
+        header := NewHeader()
+        header.Type = proto.Int32(t)
+        header.Port = proto.Int32(port)
+        hdrdata,_ := proto.Marshal(header)
+        var hdrlen int32 = int32(len(hdrdata))
         var datalen int32 = int32(len(data))
-        binary.Write(this.SBuffer, binary.BigEndian, &datalen)
-        copy(this.SBuffer[4:4+len(data)], data)
+        binary.Write(this.SBuffer, binary.BigEndian, [2]int32{hdrlen,datalen})
+        copy(this.SBuffer[8:8+len(hdrdata)],hdrdata)
+        copy(this.SBuffer[8:8+len(hdrdata)+len(data)], data)
         //fmt.Printf("Writing this: [%d]%s\n", len(this.SBuffer[0:hdrlen+len(data)]), this.SBuffer[0:hdrlen+len(data)])
-        this.Conn.Write(this.SBuffer[0:4+len(data)])
+        this.Conn.Write(this.SBuffer[0:8+len(hdrdata)+len(data)])
     })
     this.QueryHot(h)
 
