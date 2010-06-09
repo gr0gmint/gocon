@@ -36,7 +36,7 @@ type ProtoHandler struct {
     
 }
 type IProtoHandler interface {
-    Handle([]byte)
+    Handle(*Header,[]byte)
 }
 
 func (this *ProtoProxy) Init() {
@@ -74,6 +74,9 @@ func (this *ProtoProxy) Read (buf Buf) (Buf, os.Error) {
     buflen := len(buf)
     for ; total < buflen; {
             n, err := this.Conn.Read(this.Buffer[total:buflen])
+            if err != nil {
+                return nil, err
+            }
             fmt.Printf("read %d bytes\n", n)
             total += n
             fmt.Printf("total: %d\n",total)
@@ -85,18 +88,19 @@ func (this *ProtoProxy) Read (buf Buf) (Buf, os.Error) {
 
 func (this *ProtoProxy) readMsg() (*Header,[]byte, os.Error) {
     //Read header first
-    var hdrlen int32
-    var datalen int32
+    var hdrlen uint32
+    var datalen uint32
     data,err := this.Read(this.Buffer[0:8])
     if err != nil  {
         return nil,nil,err
     }
     fmt.Printf("len(data) = %d\n", len(data))
-    binary.Read(data[0:4], binary.BigEndian, &hdrlen)
-    binary.Read(data[4:8], binary.BigEndian, &datalen)
+    err = binary.Read(data[0:4], binary.BigEndian, &hdrlen)
+        if err != nil { return nil,nil,err }
+    err = binary.Read(data[4:8], binary.BigEndian, &datalen)
+        if err != nil { return nil,nil,err }
             fmt.Printf("hdrlen=%d, datalen=%d\n", hdrlen, datalen)
-    if !(hdrlen < 4096 && datalen < 16000 ) {
-
+    if !(hdrlen < 96 && datalen < 16000 ) {
         return nil,nil,os.ENOMEM
     }
     hdrdata := make(Buf, hdrlen)
@@ -108,7 +112,10 @@ func (this *ProtoProxy) readMsg() (*Header,[]byte, os.Error) {
     }
     copy(hdrdata,tmp)
     header := NewHeader()
-    proto.Unmarshal(hdrdata, header)
+    err = proto.Unmarshal(hdrdata, header)
+    if err != nil {
+        return nil,nil,err
+    }
     tmp,err = this.Read(this.Buffer[0:datalen])
     if err != nil {
         return nil,nil,err
@@ -125,12 +132,16 @@ func (this *ProtoProxy) Send(data []byte, port int32, t int32) {
         header := NewHeader()
         header.Type = proto.Int32(t)
         header.Port = proto.Int32(port)
-        hdrdata,_ := proto.Marshal(header)
-        var hdrlen int32 = int32(len(hdrdata))
-        var datalen int32 = int32(len(data))
-        binary.Write(this.SBuffer, binary.BigEndian, [2]int32{hdrlen,datalen})
+        hdrdata,err := proto.Marshal(header)
+        if err != nil {
+            fmt.Printf("%s\n", err)
+            return
+        }
+        hdrlen := uint32(len(hdrdata))
+        datalen :=  uint32(len(data))
+        binary.Write(this.SBuffer, binary.BigEndian, [2]uint32{hdrlen,datalen})
         copy(this.SBuffer[8:8+len(hdrdata)],hdrdata)
-        copy(this.SBuffer[8:8+len(hdrdata)+len(data)], data)
+        copy(this.SBuffer[8+len(hdrdata):8+len(hdrdata)+len(data)], data)
         //fmt.Printf("Writing this: [%d]%s\n", len(this.SBuffer[0:hdrlen+len(data)]), this.SBuffer[0:hdrlen+len(data)])
         this.Conn.Write(this.SBuffer[0:8+len(hdrdata)+len(data)])
     })
@@ -145,10 +156,17 @@ func (this *ProtoProxy) Main() {
         header, data, err := this.readMsg(); 
         if err != nil {
             this.Conn.Close()
-            fmt.Printf("\nConnection closed\n")
+            fmt.Printf("%s\n", err)
             return
         } else {
-            fmt.Printf("%s %s\n",header,data)
+                            fmt.Printf("header.Port = %d\n", *header.Port)
+            if *header.Port == 0 {
+
+                this.Default.Handle(header, data)
+                
+            } else {
+                this.Handlers[int(*header.Port)].Handle(header,data)
+            }
         }
         
     }

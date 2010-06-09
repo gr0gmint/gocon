@@ -175,12 +175,11 @@ func (r *Listener) Main() {
     for {
         conn,err := listener.AcceptTCP()
         if err ==nil {
-        
             proxy := NewProtoProxy(conn)
             inithandler := NewInitProtoHandler(proxy)
-
             proxy.SetDefault(inithandler)
             go proxy.Main()
+            go inithandler.Main()
         } else {
             fmt.Printf("%s\n", err)
             return

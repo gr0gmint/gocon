@@ -20,7 +20,7 @@ func main() {
    proxy := NewProtoProxy (conn)
    
    joinmsg := pwan.NewClientJoin()
-   joinmsg.Playername = proto.String("weoijoijasdjf")
+   joinmsg.Playername = proto.String("gunnar jensen abedissemand")
    data,err := proto.Marshal(joinmsg)
    if err != nil {
         fmt.Printf("E: Could not marshal\n")
