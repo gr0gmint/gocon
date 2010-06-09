@@ -48,3 +48,4 @@ message ClientWalk {
     }
     required Direction direction = 1;
 }
+

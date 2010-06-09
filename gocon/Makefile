@@ -9,7 +9,7 @@ GOFILES=\
 	gocon.go\
 	hotcode.go\
 	protohandler.go\
-	header.pb.go
+	gocon.pb.go
 
 
 include $(GOROOT)/src/Make.pkg

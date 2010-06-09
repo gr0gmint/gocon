@@ -28,11 +28,6 @@ func (r *Routine) Init() {
     r.Chan = make(chan *Message)
 }
 
-func (r *Routine) Register () bool {
-    GlobalRoutines[r.Name] = r
-    return true
-}
-
 func (r *Routine) ReqMessage(m *Message) *Message {
     m.flags |= MSG_REQ
    

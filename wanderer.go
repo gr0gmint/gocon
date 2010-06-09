@@ -24,7 +24,6 @@ type WorldHandler struct {
 
 type Player struct {
     Name string
-    PRoutine *Routine
 }
 
 type Coord struct {
@@ -91,7 +90,7 @@ func (w *World) GetCoord(x,y int) *Coord {
 
 func (this *WorldHandler) Main()  {
     this.Name =  "worldhandler"
-    this.Register()
+    GlobalRoutines["worldhandler"] = this
     this.Init()
     this.World = NewWorld()
     go this.HotStart()
@@ -103,10 +102,11 @@ const (
     DIRECTION_LEFT
     DIRECTION_RIGHT
 )
-func (this *WorldHandler) PlayerPlace(player *Player, coord *Coord) bool {
+func (this *WorldHandler) PlacePlayer(player *Player, coord *Coord) bool {
     h := NewHot(func(data map[string]interface{}) {
         self := data["self"].(*GenericHot)
         m := NewMessage()
+        fmt.Printf("Up in this hot\n")
         if this.World.PlacePlayer(player,coord) {
             m.Key = "accepted"
         } else {
@@ -114,6 +114,7 @@ func (this *WorldHandler) PlayerPlace(player *Player, coord *Coord) bool {
         }
         self.Answer<-m
     })
+    this.QueryHot(h)
     answer := <-h.Answer
     if answer.Key == "declined" {return false}
     return true
@@ -190,8 +191,8 @@ func (r *Listener) Main() {
 
 func main() {
    rand.Seed(time.Nanoseconds())
-    //worldhandler := new(WorldHandler)
-    //go worldhandler.Main()
+    worldhandler := new(WorldHandler)
+    go worldhandler.Main()
 
    server := new(Listener)
    

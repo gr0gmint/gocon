@@ -5,3 +5,6 @@ message Header {
     required int32 port = 2;
 }
 
+message AcceptBool {
+    required bool accept = 1;
+}

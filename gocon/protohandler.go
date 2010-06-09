@@ -175,21 +175,21 @@ func (this *ProtoProxy) Main() {
 
 
 
-/*
+
 func (this *ProtoHandler) Acceptbool() {
         msg := NewAcceptBool()
-        msg.Accept = true
-        data := proto.Marshal(msg)
-        this.Proxy.Send(data)
+        msg.Accept = proto.Bool(true)
+        data,_ := proto.Marshal(msg)
+        this.Proxy.Send(data, 0,0)
 }
 func (this *ProtoHandler) Declinebool() {
-        msg := pwan.NewAcceptBool()
-        msg.Accept = false
-        data := proto.Marshal(msg)
-        this.Proxy.Send(data)
+        msg := NewAcceptBool()
+        msg.Accept = proto.Bool(false)
+        data,_ := proto.Marshal(msg)
+        this.Proxy.Send(data,0,0)
 }
 
-*/
+
 
 
 
