@@ -4,7 +4,6 @@ import "fmt"
 import . "gocon"
 import "goprotobuf.googlecode.com/hg/proto"
 
-
 type InitProtoHandler struct {
     ProtoHandler
     Queue chan []byte
@@ -37,32 +36,22 @@ func ABool(accept bool) []byte{
     return data
 }
 
-func (this *InitProtoHandler) Handle(header *Header, data []byte) {
-    fmt.Printf("InitProtoHandler·Handle\n")
-    this.Queue <- data
-}
+
 
 func (this *InitProtoHandler) Main() {
-            fmt.Printf("InitProtoHandler·Main\n")
-    data := <-this.Queue
-    fmt.Printf("After chan\n")
+    fmt.Printf("InitProtoHandler·Main\n")
+    header, data := this.Proxy.ReadMsg(0)
+    fmt.Printf("After chan%s\n",header)
     //Player joins
     joinmsg := NewClientJoin() 
-    fmt.Printf("1\n")
     player := new(Player)
-        fmt.Printf("2\n")
     proto.Unmarshal(data, joinmsg)
-        fmt.Printf("3\n")
     player.Name = *joinmsg.Playername
-        fmt.Printf("4\n")
     worldhandler := GlobalRoutines["worldhandler"].(*WorldHandler)
-        fmt.Printf("5\n")
     coord := worldhandler.World.GetCoord(50,50)
-        fmt.Printf("6\n")
+    fmt.Printf("%d %d\n", coord.X, coord.Y)
     worldhandler.PlacePlayer(player,coord)
-    fmt.Printf("7\n")
-    a := ABool(true)
-    this.Proxy.Send(a,0,Server_ANSWERBOOL)
+    this.Acceptbool()
 
 }   
 

@@ -20,14 +20,13 @@ type ProtoProxy struct {
     HotRoutine
     Buffer Buf
     SBuffer Buf
-    Conn *net.TCPConn
-    Default *IProtoHandler
-    Handlers map[int]IProtoHandler  
-    headersize int
-    Filter *ProtoFilter
+    Conn *net.TCPConn 
+    headersize int 
+    PortChans map[int]chan hdr_n_data
 }
 type ProtoFilter interface {
-     Check(header *Header) bool
+     Check(*Header) bool
+     Call ( *Header, Buf)
 }
 
 type ProtoHandler struct {
@@ -35,15 +34,15 @@ type ProtoHandler struct {
     Proxy *ProtoProxy
     
 }
-type IProtoHandler interface {
-    Handle(*Header,[]byte)
+type hdr_n_data struct {
+    header *Header
+    data Buf
 }
 
 func (this *ProtoProxy) Init() {
     this.Buffer = make([]byte, 10000)
     this.SBuffer = make([]byte, 10000)
     
-    this.Handlers = make(map[int]IProtoHandler)
     go this.HotStart()
 }
 
@@ -51,19 +50,12 @@ func NewProtoProxy(conn *net.TCPConn) *ProtoProxy {
     p := new(ProtoProxy)
     p.Conn = conn
     p.Init()
+    p.PortChans = make(map[int]chan hdr_n_data)
     go p.HotStart()
     return p
 }
 
-func (this *ProtoProxy) AddHandler(port int, handler IProtoHandler) {
-    this.Handlers[port] = handler
-}
-func (this *ProtoProxy) SetDefault(def IProtoHandler) {
-    this.Default = &def
-}
-func (this *ProtoProxy) RemoveHandler(port int) {
-    this.Handlers[port] = nil
-}
+
 
 func (this *ProtoProxy) Read (buf Buf) (Buf, os.Error) {
     if buf == nil {
@@ -125,7 +117,7 @@ func (this *ProtoProxy) readMsg() (*Header,[]byte, os.Error) {
     
     return header, newdata,nil
 } 
-func (this *ProtoProxy) Send(data []byte, port int32, t int32) {
+func (this *ProtoProxy) SendMsg(data []byte, port int32, t int32) {
     h := NewHot(func(shared map[string]interface{}){
         fmt.Printf("inside hot\n")
         //self := shared["self"].(*GenericHot)
@@ -149,6 +141,13 @@ func (this *ProtoProxy) Send(data []byte, port int32, t int32) {
 
 }
 
+func (this *ProtoProxy) ReadMsg(port int) (*Header, []byte) {
+    if this.PortChans[port] == nil {
+        this.PortChans[port] = make(chan hdr_n_data)
+    }
+    m := <- this.PortChans[port]
+    return m.header, m.data
+}
 
 func (this *ProtoProxy) Main() {
     this.Init()
@@ -159,37 +158,36 @@ func (this *ProtoProxy) Main() {
             fmt.Printf("%s\n", err)
             return
         } else {
-                            fmt.Printf("header.Port = %d\n", *header.Port)
-            if *header.Port == 0 {
-
-                this.Default.Handle(header, data)
-                
-            } else {
-                this.Handlers[int(*header.Port)].Handle(header,data)
+            port := int(*header.Port)
+            fmt.Printf("header.Port = %d\n", *header.Port)
+            if this.PortChans[port] == nil {
+                this.PortChans[port] = make(chan hdr_n_data)
             }
+            m := hdr_n_data{header,data}
+            go func() {this.PortChans[port] <- m }()
         }
         
     }
 }
 
-
-
-
+func (this *ProtoHandler) IsAccepted(port int) bool {
+    _, data := this.Proxy.ReadMsg(port)
+    a := NewAcceptBool()
+    err := proto.Unmarshal(data,a)
+    if err != nil {return false}
+    if *a.Accept == true { return true }
+    return false 
+}
 
 func (this *ProtoHandler) Acceptbool() {
         msg := NewAcceptBool()
         msg.Accept = proto.Bool(true)
         data,_ := proto.Marshal(msg)
-        this.Proxy.Send(data, 0,0)
+        this.Proxy.SendMsg(data, 0,0)
 }
 func (this *ProtoHandler) Declinebool() {
         msg := NewAcceptBool()
         msg.Accept = proto.Bool(false)
         data,_ := proto.Marshal(msg)
-        this.Proxy.Send(data,0,0)
+        this.Proxy.SendMsg(data,0,0)
 }
-
-
-
-
-

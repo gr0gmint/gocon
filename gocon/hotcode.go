@@ -36,7 +36,7 @@ type HotRoutine struct {
 }
 func (this *HotRoutine) QueryHot(h Hot) {
     //if !this.hotlock {
-         this.HotChan<-h
+     this.HotChan<-h
     //} else { //We're already in another hot, which means the hot called another hot
    //     shared := make(map[string]interface{})
     //    shared["self"] = h

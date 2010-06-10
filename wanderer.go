@@ -32,7 +32,7 @@ type Coord struct {
 }
 
 type World struct {
-    Coords [WORLD_SIZE_X][WORLD_SIZE_Y] Coord
+    Coords map[int](map[int]*Coord)
     PlayerIndex map[*Player]*Coord
 }
 
@@ -46,45 +46,51 @@ var BServer = NewBroadcastServer()
 
 
 
-func (c *Coord) Players() map[string]*Player {
-    return c.Data["players"].(map[string]*Player)
+func (c *Coord) GetPlayer(name string) *Player {
+    
+    players := c.Data["players"].(map[string]*Player)
+    return players[name]
+}
+
+func (c *Coord) SetPlayer(name string, value *Player) {
+    players := c.Data["players"].(map[string]*Player)
+    players[name] = value
+    return
 }
 
 
 func NewWorld () *World {
     world := new(World)
-
-    //Make Coord objects
-    for i := range world.Coords {
-        for j,c := range world.Coords[i] {
-            c.Data = make(map[string]interface{})
-            c.X = i
-            c.Y = j
-            //Common fields
-            c.Data["players"] = make(map[string]*Player)
-            //c.Data["gobjects"] = make([]*GameObject, 100)
-        }
-    }
-
-    //Make Player:>Coord index
+    world.Coords = make(map[int](map[int]*Coord))
     world.PlayerIndex = make(map[*Player]*Coord)
-    
     return world
 } 
 
 func (w *World) PlacePlayer(player *Player, c *Coord)  bool {
-    if coord,ok := w.PlayerIndex[player]; ok {  
-        if _,ok = coord.Players()[player.Name]; ok {
-            coord.Players()[player.Name] = nil
-        }
+        c.SetPlayer(player.Name, nil)
         w.PlayerIndex[player] = nil
-    }
-    c.Players()[player.Name] = player
+    c.SetPlayer(player.Name, player)
     w.PlayerIndex[player] = c
     return true
 }
 func (w *World) GetCoord(x,y int) *Coord {
-    return &w.Coords[x][y]
+    if !(x >= 0 && x <= WORLD_SIZE_X && y >= 0 && y <= WORLD_SIZE_Y) {
+        return nil
+    }
+    _,ok := w.Coords[x]
+    if !ok  { w.Coords[x] = make(map[int]*Coord) }
+    _,ok = w.Coords[x][y]
+    if !ok {
+        fmt.Printf("its not ok man\n")
+        c := new(Coord)
+        c.Data = make(map[string]interface{})
+        c.X = x
+        c.Y = y
+        //Common fields
+        c.Data["players"] = make(map[string]*Player)
+        w.Coords[x][y] = c
+    }
+    return w.Coords[x][y]
 }
 
 
@@ -178,7 +184,6 @@ func (r *Listener) Main() {
         if err ==nil {
             proxy := NewProtoProxy(conn)
             inithandler := NewInitProtoHandler(proxy)
-            proxy.SetDefault(inithandler)
             go proxy.Main()
             go inithandler.Main()
         } else {
