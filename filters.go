@@ -28,6 +28,15 @@ type CenterTree struct {
     NodeMap map[*Interval]*CenterNode
 }
 
+type Filter interface {
+    ParseBroadcast(b *Broadcast)
+}
+
+type FilterPlayer struct {
+    PlFilterMap map[*Player]*Filter
+}
+
+
 func (c *CenterNode) searchNodeForPoint(point int, acc_chan chan *Interval) { 
     if point >= c.MaxIntervalStart && point <= c.MaxIntervalStop {
         c := c.Intervals.Iter()
@@ -117,6 +126,21 @@ func (c *CenterTree) FindIntervals(point int) *Vector /* *Interval */ {
     }
     return intervals
 }
+func (c *CenterTree) FindIntervalsByInterval(interval *Interval) *Vector { 
+    acc_chan := make(chan *Interval, 100)
+    intervals := new(Vector)
+    go c.Top.searchNodeForPoint(interval.Start, acc_chan)
+    go c.Top.searchNodeForPoint(interval.Stop, acc_chan)
+    for {
+        i := <-acc_chan
+        if i == nil {
+            break
+        }
+        intervals.Push(i)
+    }
+    return intervals
+}
+
 func (c *CenterTree) AddInterval(interval *Interval) {
     c.Top.AddInterval(interval)
 }
@@ -131,13 +155,6 @@ func NewCenterTree(start,stop int) *CenterTree {
     return btree
 }
 
-type Filter interface {
-    ParseBroadcast(b *Broadcast)
-}
-
-type FilterPlayer struct {
-    PlFilterMap map[*Player]*Filter
-}
 func NewFilterPlayer() *FilterPlayer {
     f := new(FilterPlayer)
     f.PlFilterMap = make(map[*Player]*Filter)

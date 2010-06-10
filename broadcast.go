@@ -13,31 +13,40 @@ func NewBroadcast () {
 
 type BroadcastServer struct {
     HotRoutine
-    Filters  *Vector 
+    Filters  *Vector
 }
 
-func    (this *BroadcastServer) Setup() {
+func (this *BroadcastServer) Setup() {
+    
+    filterdistance := NewFilterDistanceFromPlayer() 
+    this.AddFilter(filterdistance)
+    GlobalRoutines["filterdistance"] = filterdistance
+    filterplayer := NewFilterPlayer()
+    this.AddFilter(filterplayer)
     
 }
 
-func (this *BroadcastServer) AddFilter(filter *Filter) {
+func (this *BroadcastServer) AddFilter(filter Filter) {
     this.Filters.Push(filter)
 }
 
 func NewBroadcastServer() *BroadcastServer {
     b := new(BroadcastServer)
     b.Init()
+    b.Filters = new(Vector)
+  
     return b
 }
 
+
 func (this *BroadcastServer) Main() {
     go this.HotStart()
-    this.Filters = new(Vector)
     for {
         m := <- this.Chan 
         switch  {
             case m.Key == "broadcast":
-                
+                b := m.Data["b"].(*Broadcast)
+                this.Broadcast(b)
         }
     }
 }
@@ -45,6 +54,6 @@ func (this *BroadcastServer) Main() {
 func (this *BroadcastServer) Broadcast(b *Broadcast) {
     c := this.Filters.Iter()
     for { filter,ok := <-c; if !ok {break;}
-         filter.(*Filter).ParseBroadcast(b)
+         filter.(Filter).ParseBroadcast(b)
     }
 }
