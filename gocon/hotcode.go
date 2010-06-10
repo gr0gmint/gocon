@@ -7,7 +7,7 @@ package gocon
     this.queryHot(h)
     answer:=<-h.Answer
 *********************************************/
-import "fmt"
+
 
 type Hot interface { //Hot code "swapping"
     Unpack(map[string]interface{})
@@ -48,13 +48,9 @@ func (this *HotRoutine) QueryHot(h Hot) {
 func (this *HotRoutine) HotStart() {
     this.HotChan = make(chan Hot)
     for {
-        fmt.Printf("DEBUG: listening to this.HotChan\n")
         h := <-this.HotChan
-        fmt.Printf("got a hot!\n")
         shared := make(map[string]interface{})
         shared["self"] = h
-        fmt.Printf("Trying to unpack\n")
-        fmt.Printf("%s\n", h)
         h.Unpack(shared)
 
     }

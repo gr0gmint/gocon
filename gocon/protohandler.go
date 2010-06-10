@@ -119,7 +119,6 @@ func (this *ProtoProxy) readMsg() (*Header,[]byte, os.Error) {
 } 
 func (this *ProtoProxy) SendMsg(data []byte, port int32, t int32) {
     h := NewHot(func(shared map[string]interface{}){
-        fmt.Printf("inside hot\n")
         //self := shared["self"].(*GenericHot)
         header := NewHeader()
         header.Type = proto.Int32(t)
@@ -155,11 +154,9 @@ func (this *ProtoProxy) Main() {
         header, data, err := this.readMsg(); 
         if err != nil {
             this.Conn.Close()
-            fmt.Printf("%s\n", err)
             return
         } else {
             port := int(*header.Port)
-            fmt.Printf("header.Port = %d\n", *header.Port)
             if this.PortChans[port] == nil {
                 this.PortChans[port] = make(chan hdr_n_data)
             }
