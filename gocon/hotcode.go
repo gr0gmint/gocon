@@ -35,23 +35,25 @@ type HotRoutine struct {
     hotlock bool
 }
 func (this *HotRoutine) QueryHot(h Hot) {
-    //if !this.hotlock {
+    if !this.hotlock {
      this.HotChan<-h
-    //} else { //We're already in another hot, which means the hot called another hot
-   //     shared := make(map[string]interface{})
-    //    shared["self"] = h
-    //    go h.Unpack(shared)
-    //}
+    } else { //We're already in another hot, which means the hot called another hot
+        shared := make(map[string]interface{})
+        shared["self"] = h
+        go h.Unpack(shared)
+    }
 
 }
 
 func (this *HotRoutine) HotStart() {
+    this.hotlock=false
     this.HotChan = make(chan Hot)
     for {
         h := <-this.HotChan
         shared := make(map[string]interface{})
         shared["self"] = h
+        this.hotlock=true
         h.Unpack(shared)
-
+        this.hotlock=false
     }
 }

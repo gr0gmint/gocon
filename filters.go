@@ -2,6 +2,7 @@ package main
 
 
 import . "container/vector"
+import "fmt"
 
 type Interval struct {
     Start int
@@ -36,8 +37,13 @@ type FilterPlayer struct {
     PlFilterMap map[*Player]*Filter
 }
 
+type FilterDistanceFromPlayer struct { 
+    XTree *CenterTree
+    PlIntervalMap map[*Player]*Interval
+}
 
 func (c *CenterNode) searchNodeForPoint(point int, acc_chan chan *Interval) { 
+    fmt.Printf("In CenterNode·seachNodeForPoint\n")
     if point >= c.MaxIntervalStart && point <= c.MaxIntervalStop {
         c := c.Intervals.Iter()
         for {
@@ -87,6 +93,7 @@ func (c *CenterNode) RemoveInterval(interval *Interval) {
 }
 
 func (c *CenterNode) AddInterval(interval *Interval) {
+    fmt.Printf("CenterNode·AddInterval\n")
     if interval.Start <= c.Point && interval.Stop >= c.Point {
         if c.Intervals == nil {
             c.Intervals = new(Vector)
@@ -114,6 +121,7 @@ func (c *CenterNode) AddInterval(interval *Interval) {
     
 }
 func (c *CenterTree) FindIntervals(point int) *Vector /* *Interval */ { 
+    fmt.Printf("CenterTree·FindIntervals\n")
     acc_chan := make(chan *Interval, 100)
     intervals := new(Vector)
     go c.Top.searchNodeForPoint(point, acc_chan)
@@ -122,10 +130,12 @@ func (c *CenterTree) FindIntervals(point int) *Vector /* *Interval */ {
         if i == nil {
             break
         }
+        fmt.Printf("Found an interval\n")
         intervals.Push(i)
     }
     return intervals
 }
+/*
 func (c *CenterTree) FindIntervalsByInterval(interval *Interval) *Vector { 
     acc_chan := make(chan *Interval, 100)
     intervals := new(Vector)
@@ -140,7 +150,7 @@ func (c *CenterTree) FindIntervalsByInterval(interval *Interval) *Vector {
     }
     return intervals
 }
-
+*/
 func (c *CenterTree) AddInterval(interval *Interval) {
     c.Top.AddInterval(interval)
 }
@@ -173,13 +183,11 @@ func (f *FilterPlayer) ParseBroadcast(b *Broadcast) {
     }
 }
 
-type FilterDistanceFromPlayer struct { 
 
-    XTree *CenterTree
-}
 func NewFilterDistanceFromPlayer() *FilterDistanceFromPlayer {
     f := new(FilterDistanceFromPlayer)
     f.XTree = NewCenterTree(0, WORLD_SIZE_X)
+    f.PlIntervalMap  = make(map[*Player]*Interval)
     return f
 
 }
@@ -198,6 +206,7 @@ func FindOverlapping(v *Vector, coord *Coord) *Vector {
 }
 
 func (f *FilterDistanceFromPlayer) ParseBroadcast(b *Broadcast) {
+    fmt.Printf("In FilterDistanceFromPlayer·ParseBroadcast\n")
     coord := b.Data["coord"].(*Coord)
     v_intervalsx := f.XTree.FindIntervals(coord.X)
     overlapping := FindOverlapping(v_intervalsx, coord)   
@@ -212,6 +221,7 @@ func (f *FilterDistanceFromPlayer) ParseBroadcast(b *Broadcast) {
     
 }
 func (f *FilterDistanceFromPlayer) AddFilter(startX,stopX,startY,stopY int, filter *Filter) {
+    fmt.Printf("In FilterDistanceFromPlayer·AddFilter\n")
     intervalX := new(Interval)
     intervalY := new(Interval)
     intervalX.Sibling = intervalY

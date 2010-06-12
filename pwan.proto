@@ -4,7 +4,7 @@ message Server { //Not really a message
 
     enum Type {
         ANSWERBOOL = 1;
-        ANSWER = 2;  //Use JSON? I think so ;V ;V ;V
+        ANSWERJSON = 2;  //Use JSON?
         TEXTMESSAGE = 3;
         LOCATION = 4;
         PLAYERMOVE = 5;
@@ -15,9 +15,14 @@ message Server { //Not really a message
         PLAYERATTR = 10;
         SOCIAL = 11;
         QUESTLOG = 12;
+        JSON = 13;
     }
 
 }
+
+
+
+
 message Client {
     enum Type { 
     
@@ -30,9 +35,12 @@ message Client {
     QUESTLOG = 7;
     SOCIAL = 8;
     ANSWERBOOL = 9;
-    ANSWER = 10; //JSON
+    ANSWERJSON = 10;
+    JSON = 11;
     }
 }
+
+
 
 
 message ClientJoin {
@@ -48,4 +56,5 @@ message ClientWalk {
     }
     required Direction direction = 1;
 }
+
 

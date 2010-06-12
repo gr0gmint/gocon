@@ -15,6 +15,10 @@ const (
  WORLD_SIZE_Y = 1024
 )
 
+const (
+ PORT_INIT = 0
+)
+
 
 type WorldHandler struct {
     HotRoutine
@@ -81,7 +85,7 @@ func (w *World) GetCoord(x,y int) *Coord {
     if !ok  { w.Coords[x] = make(map[int]*Coord) }
     _,ok = w.Coords[x][y]
     if !ok {
-        fmt.Printf("its not ok man\n")
+        fmt.Printf("New *Coord created\n")
         c := new(Coord)
         c.Data = make(map[string]interface{})
         c.X = x
@@ -112,8 +116,13 @@ func (this *WorldHandler) PlacePlayer(player *Player, coord *Coord) bool {
     h := NewHot(func(data map[string]interface{}) {
         self := data["self"].(*GenericHot)
         m := NewMessage()
-        fmt.Printf("Up in this hot\n")
         if this.World.PlacePlayer(player,coord) {
+            fmt.Printf("Trying to broadcast now\n")
+            b := NewBroadcast()
+            b.Data["player"] = player
+            b.Data["coord"] = coord
+            BServer.Broadcast(b)
+            
             m.Key = "accepted"
         } else {
             m.Key = "declined"
@@ -124,6 +133,10 @@ func (this *WorldHandler) PlacePlayer(player *Player, coord *Coord) bool {
     answer := <-h.Answer
     if answer.Key == "declined" {return false}
     return true
+}
+
+func (this *WorldHandler) GetCurrentCoord (player *Player )*Coord  {
+    return this.World.PlayerIndex[player]
 }
 func (this *WorldHandler) PlayerMove(player *Player, direction int) bool {
     h:=NewHot(func(data map[string]interface{}){
@@ -149,7 +162,7 @@ func (this *WorldHandler) PlayerMove(player *Player, direction int) bool {
                 m.Key = "declined"
             } else {    
                 newcoord := this.World.GetCoord(currentcord.X+dirx, currentcord.Y+diry)
-                if this.World.PlacePlayer(player, newcoord) {
+                if this.PlacePlayer(player, newcoord) {
                     m.Key = "accepted"
                 } else {
                     m.Key = "declined"
@@ -198,7 +211,8 @@ func main() {
    rand.Seed(time.Nanoseconds())
     worldhandler := new(WorldHandler)
     go worldhandler.Main()
-
+    BServer.Setup()
+go BServer.Main()
    server := new(Listener)
    
    server.Main()  

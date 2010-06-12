@@ -17,5 +17,5 @@ default:
 	8l wanderer.8
 
 client: 
-	8g wandererclient.go
+	8g wandererclient.go pwan.go
 	8l -o wan wandererclient.8 
