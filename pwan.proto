@@ -40,7 +40,13 @@ message Client {
     }
 }
 
-
+message VisibleObject {
+    required int32 id = 1;
+    required int32 char = 2;
+    required string description = 3;
+    optional int32 color = 4;
+    optional int32 type = 5;
+}
 
 
 message ClientJoin {

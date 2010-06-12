@@ -16,7 +16,8 @@ const (
 )
 
 const (
- PORT_INIT = 0
+ PORT_MAIN = 0
+ PORT_PUSH = 1
 )
 
 
@@ -28,6 +29,7 @@ type WorldHandler struct {
 
 type Player struct {
     Name string
+    
 }
 
 type Coord struct {
@@ -45,10 +47,23 @@ type Listener struct {
     Routine   
 }
 
+type AutoIncrementer struct {
+    counter int
+}
+
 
 var BServer = NewBroadcastServer()
 
+func NewAutoIncrementer() *AutoIncrementer {
+    a := new(AutoIncrementer)
+    return a
+}
 
+func (this *AutoIncrementer) Get() int {
+    old := this.counter
+    this.counter += 1
+    return old
+}
 
 func (c *Coord) GetPlayer(name string) *Player {
     

@@ -17,13 +17,13 @@ type BroadcastServer struct {
     HotRoutine
     Filters  *Vector
 }
-
+var FDistanceFromPlayer *FilterDistanceFromPlayer
+var FPlayer *FilterPlayer
 func (this *BroadcastServer) Setup() {
-    filterdistance := NewFilterDistanceFromPlayer() 
-    this.AddFilter(filterdistance)
-    GlobalRoutines["filterdistance"] = filterdistance
-    filterplayer := NewFilterPlayer()
-    this.AddFilter(filterplayer)
+    FDistanceFromPlayer = NewFilterDistanceFromPlayer() 
+    this.AddFilter(FDistanceFromPlayer)
+    FPlayer := NewFilterPlayer()
+    this.AddFilter(FPlayer)
     
 }
 
@@ -57,7 +57,6 @@ func (this *BroadcastServer) Broadcast(b *Broadcast) {
     c := this.Filters.Iter()
     for { filter := <-c
         if filter == nil {break }
-        fmt.Printf("Giving to filter\n")
          filter.(Filter).ParseBroadcast(b)
     }
 }

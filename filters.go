@@ -7,7 +7,9 @@ import "fmt"
 type Interval struct {
     Start int
     Stop int
+    Node *CenterNode
     Sibling *Interval
+    Callback func(*Vector)
     Data map[string]interface{}
 }
 
@@ -26,7 +28,7 @@ type CenterNode struct {
 type CenterTree struct {
     Start,Stop int
     Top *CenterNode
-    NodeMap map[*Interval]*CenterNode
+    //NodeMap map[*Interval]*CenterNode
 }
 
 type Filter interface {
@@ -44,10 +46,10 @@ type FilterDistanceFromPlayer struct {
 
 func (c *CenterNode) searchNodeForPoint(point int, acc_chan chan *Interval) { 
     fmt.Printf("In CenterNode·seachNodeForPoint\n")
-    if point >= c.MaxIntervalStart && point <= c.MaxIntervalStop {
-        c := c.Intervals.Iter()
+        if c.Intervals == nil { c.Intervals = new(Vector) }
+        ch := c.Intervals.Iter()
         for {
-           if i ,ok := <-c; ok {
+           if i := <-ch; i != nil {
                 interval := i.(*Interval)
                 if interval.Start <=  point && interval.Stop >= point {
                     acc_chan <- interval
@@ -56,29 +58,31 @@ func (c *CenterNode) searchNodeForPoint(point int, acc_chan chan *Interval) {
             
         }
 
-    } else { //search the left and right nodes
         if point <= c.Point && c.Left != nil  {
             go c.Left.searchNodeForPoint(point, acc_chan)
             return 
-        } 
+        }  
         if point >= c.Point && c.Right != nil {
             go c.Right.searchNodeForPoint(point, acc_chan)
             return
         }
-    }
     acc_chan <- nil
     
 }
+func (this *Interval) Detach() {
+    this.Node.RemoveInterval(this)
+}
 func (c *CenterNode) RemoveInterval(interval *Interval) {
-    node := c.Tree.NodeMap[interval]
+    //node := c.Tree.NodeMap[interval]
+    node := interval.Node
     length := node.Intervals.Len()
     
     for i := 0; i < length; i++ {   
         if node.Intervals.At(i).(*Interval) == interval {
             node.Intervals.Swap(i,length-1)
             node.Intervals.Pop()
-            c.Tree.NodeMap[interval] = nil
-            if node.Intervals.Len() == 0 && node.Left == nil && node.Right == nil { //remove references to node
+            //c.Tree.NodeMap[interval] = nil
+            if node.Intervals.Len() == 0 && node.Left == nil && node.Right == nil { 
                 if node == c.Tree.Top {break;}
                 if node == node.Parent.Left {
                     node.Parent.Left = nil
@@ -99,7 +103,7 @@ func (c *CenterNode) AddInterval(interval *Interval) {
             c.Intervals = new(Vector)
         }  
         c.Intervals.Push(interval)
-        c.Tree.NodeMap[interval] = c
+        //c.Tree.NodeMap[interval] = c
         return
     } else if interval.Stop < c.Point {
         if c.Left == nil { //Create left node if it does not exist
@@ -160,7 +164,7 @@ func NewCenterTree(start,stop int) *CenterTree {
     btree.Stop = stop
     btree.Top= new(CenterNode)
     btree.Top.Point = (stop+start)/2 
-    btree.NodeMap = make(map[*Interval]*CenterNode)
+    //btree.NodeMap = make(map[*Interval]*CenterNode)
     
     return btree
 }
@@ -220,7 +224,7 @@ func (f *FilterDistanceFromPlayer) ParseBroadcast(b *Broadcast) {
     }
     
 }
-func (f *FilterDistanceFromPlayer) AddFilter(startX,stopX,startY,stopY int, filter *Filter) {
+func (f *FilterDistanceFromPlayer) RegisterInterval(startX,stopX,startY,stopY int) *Interval{
     fmt.Printf("In FilterDistanceFromPlayer·AddFilter\n")
     intervalX := new(Interval)
     intervalY := new(Interval)
@@ -229,7 +233,6 @@ func (f *FilterDistanceFromPlayer) AddFilter(startX,stopX,startY,stopY int, filt
     intervalX.Stop = stopX
     intervalY.Start = startY
     intervalY.Stop = stopY
-    
-    intervalX.Data["filter"] = filter
-    f.XTree.AddInterval(intervalX)  
+    f.XTree.AddInterval(intervalX)
+    return intervalX
 }

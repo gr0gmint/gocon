@@ -15,6 +15,23 @@ type InWorldProtoHandler struct { //Need this?
     ProtoHandler
 }
 
+type PushProtoHandler struct {
+    ProtoHandler
+    HotRoutine
+}
+
+func NewPushProtoHandler(p *ProtoProxy) *PushProtoHandler  {
+    push := new(PushProtoHandler)
+    push.Proxy =p 
+    push.Init()
+    go push.HotStart()
+    return push
+}
+
+func (this *PushProtoHandler) Main() {
+}
+//func (this *PushProtoHandler) PushVisibleObjects(objects []*GObject) {
+//}
 
 
 func NewInWorldProtoHandler(p *ProtoProxy) *InWorldProtoHandler {
