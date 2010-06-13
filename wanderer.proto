@@ -17,6 +17,7 @@ message Server { //Not really a message
         QUESTLOG = 12;
         JSON = 13;
         OBJECTPUSH = 14;
+        UPDATELOCATION = 15;
     }
 
 }
@@ -42,6 +43,10 @@ message Client {
 }
 
 
+message Coordinate {
+    required int32 x = 1;
+    required int32 y = 2;
+}
 
 message GObject {
     enum Type {
@@ -52,18 +57,24 @@ message GObject {
     }
     required int32 id = 1;
     required int32 char = 2;
-    required string description = 3;
-    
+    required string description = 3;   
     required Type type = 4;
-    optional int32 color = 5;
+    required Coordinate coord = 5;
+    optional int32 color = 6;
+    optional bool disappear = 7;
+    
     
     //Union
     optional GObjectPlayer player = 50;
     optional GObjectNPC npc = 51;
     //End union
     
-    optional bool disappear = 100;
 }
+
+message UpdatePlayerCoord {
+    required Coordinate coord = 1;
+}
+
 message GObjectPlayer {
     required string name = 1;
     required bool idle = 2;

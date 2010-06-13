@@ -27,8 +27,21 @@ func NewPushProtoHandler(p *ProtoProxy) *PushProtoHandler  {
     go push.HotStart()
     return push
 }
-
+func (this *PushProtoHandler) UpdatePlayerCoordinate(x,y int) {
+    fmt.Printf("Updating player coordinate\n")
+    m := NewUpdatePlayerCoord()
+    m.Coord = new(Coordinate)
+    m.Coord.X = proto.Int32(int32(x))
+    m.Coord.Y = proto.Int32(int32(y))
+    data,err := proto.Marshal(m)
+    if err != nil {
+        fmt.Printf("E: %s", err)
+        return
+    }
+    this.Proxy.SendMsg(data, Server_UPDATELOCATION, PORT_PUSH, false)
+}
 func (this *PushProtoHandler) Main() {
+    
 }
 //func (this *PushProtoHandler) PushVisibleObjects(objects []*GObject) {
 //}
@@ -62,19 +75,28 @@ func (this *InitProtoHandler) Main() {
     }
     //Player joins
     joinmsg := NewClientJoin() 
-    player := new(Player)
+    player := NewPlayer()
     proto.Unmarshal(data, joinmsg)
     player.Name = *joinmsg.Playername
     worldhandler := GlobalRoutines["worldhandler"].(*WorldHandler)
     coord := worldhandler.World.GetCoord(50,50)
     fmt.Printf("%d %d\n", coord.X, coord.Y)
+    
+    pusher := NewPushProtoHandler(this.Proxy)
+    go pusher.Main()
+    player.ProtoHandlers[PORT_PUSH] = pusher
+    
     worldhandler.PlacePlayer(player,coord)
     this.Acceptbool()
     //Pass on to another handler
     session := make(Session)
     session["player"] = player
     
+
+    
+    
     inworld := NewInWorldProtoHandler(this.Proxy)
+    player.ProtoHandlers[PORT_MAIN] = inworld
     inworld.Main(&session)
     
 

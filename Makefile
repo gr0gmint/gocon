@@ -10,7 +10,8 @@ GOFILES=\
 	broadcast.go\
 	protohandlers.go\
 	wanderer.pb.go\
-	filters.go
+	filters.go\
+	ports.go
 
 default:
 	protoc --go_out=. wanderer.proto
@@ -18,5 +19,5 @@ default:
 	8l wanderer.8
 
 client: 
-	8g wandererclient.go wanderer.pb.go
+	8g wandererclient.go wanderer.pb.go ports.go
 	8l -o wan wandererclient.8 

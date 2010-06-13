@@ -34,6 +34,17 @@ type TextWindow struct {
     Window
 }
 
+func NewObjectHandler(p *ProtoProxy) *ObjectHandler {
+    c := new(ObjectHandler)
+    c.Proxy = p
+    c.Init()
+    return c
+}
+
+func (this *ObjectHandler) Main() {
+    
+}
+
 func NewClientHandler(p *ProtoProxy) *ClientHandler {
     c := new(ClientHandler)
     c.Proxy=p
@@ -49,7 +60,7 @@ func (this *ClientHandler) Main() {
         if err != nil { fmt.Printf("E: %s", err)  }
     
     //Login
-    this.Proxy.SendMsg(data,0,Client_JOIN)
+    this.Proxy.SendMsg(data,0,Client_JOIN,false)
        if (this.IsAccepted(0)) {
         fmt.Printf("Request was accepted by server\n")
         for {
@@ -71,7 +82,7 @@ func (this *ClientHandler) Main() {
             m := NewClientWalk()
             m.Direction = direction
             mdata,err:= proto.Marshal(m); if err!= nil {Endwin(); fmt.Printf("Couldnt marshal\n")}
-            this.Proxy.SendMsg(mdata,0,Client_WALK)
+            this.Proxy.SendMsg(mdata,0,Client_WALK,false)
         }
         endfor:
     } else {
@@ -87,7 +98,6 @@ func main() {
     Initscr()
     defer Endwin()
     Cbreak()
-    Noecho()
     Stdwin.Keypad(true)
     
     raddr, _ := net.ResolveTCPAddr("127.0.0.1:7777")

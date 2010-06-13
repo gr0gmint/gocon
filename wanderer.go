@@ -15,10 +15,6 @@ const (
  WORLD_SIZE_Y = 1024
 )
 
-const (
- PORT_MAIN = 0
- PORT_PUSH = 1
-)
 
 
 type WorldHandler struct {
@@ -29,6 +25,7 @@ type WorldHandler struct {
 
 type Player struct {
     Name string
+    ProtoHandlers map[int]interface{}
     
 }
 
@@ -54,6 +51,12 @@ type AutoIncrementer struct {
 
 var BServer = NewBroadcastServer()
 
+
+func NewPlayer() *Player {
+    p := new(Player)
+    p.ProtoHandlers = make(map[int]interface{})
+    return p
+}
 func NewAutoIncrementer() *AutoIncrementer {
     a := new(AutoIncrementer)
     return a
@@ -86,8 +89,8 @@ func NewWorld () *World {
 } 
 
 func (w *World) PlacePlayer(player *Player, c *Coord)  bool {
-        c.SetPlayer(player.Name, nil)
-        w.PlayerIndex[player] = nil
+    c.SetPlayer(player.Name, nil)
+    w.PlayerIndex[player] = nil
     c.SetPlayer(player.Name, player)
     w.PlayerIndex[player] = c
     return true
@@ -137,7 +140,7 @@ func (this *WorldHandler) PlacePlayer(player *Player, coord *Coord) bool {
             b.Data["player"] = player
             b.Data["coord"] = coord
             BServer.Broadcast(b)
-            
+            (player.ProtoHandlers[PORT_PUSH].(*PushProtoHandler)).UpdatePlayerCoordinate(coord.X, coord.Y)
             m.Key = "accepted"
         } else {
             m.Key = "declined"

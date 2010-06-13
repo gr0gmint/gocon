@@ -117,7 +117,7 @@ func (this *ProtoProxy) readMsg() (*Header,[]byte, os.Error) {
     
     return header, newdata,nil
 } 
-
+/*
 func SubMsg(data []byte, t int32, encap bool) []byte {
         header := NewSubHeader()
         header.Type = proto.Int32(t)
@@ -170,7 +170,7 @@ func UnSubMsg(data []byte) (*SubHeader, []byte) {
     
     return header, newdata,nil
 }
-
+*/
 func (this *ProtoProxy) SendMsg(data []byte, port int32, t int32, encap bool) {
     h := NewHot(func(shared map[string]interface{}){
         //self := shared["self"].(*GenericHot)
@@ -197,7 +197,7 @@ func (this *ProtoProxy) SendMsg(data []byte, port int32, t int32, encap bool) {
 
 func (this *ProtoProxy) ReadMsg(port int) (*Header, []byte) {
     if this.PortChans[port] == nil {
-        this.PortChans[port] = make(chan hdr_n_data)
+        this.PortChans[port] = make(chan hdr_n_data,10)
     }
     m := <- this.PortChans[port]
     return m.header, m.data
@@ -241,5 +241,5 @@ func (this *ProtoHandler) Declinebool() {
         msg := NewAcceptBool()
         msg.Accept = proto.Bool(false)
         data,_ := proto.Marshal(msg)
-        this.Proxy.SendMsg(data,0,0)
+        this.Proxy.SendMsg(data,0,0,false)
 }
