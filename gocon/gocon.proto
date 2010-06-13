@@ -3,6 +3,12 @@ package gocon;
 message Header {
     required int32 type = 1;
     required int32 port = 2;
+    required bool encap = 3;
+}
+
+message SubHeader {
+    required int32 type = 1;
+    required bool encap = 2;
 }
 
 message AcceptBool {

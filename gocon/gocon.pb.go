@@ -3,10 +3,15 @@
 
 package gocon
 
+import proto "net/proto2/go/proto"
+
+// Reference proto import to suppress error if it's not otherwise used.
+var _ = proto.GetString
 
 type Header struct {
 	Type	*int32	"PB(varint,1,req,name=type)"
 	Port	*int32	"PB(varint,2,req,name=port)"
+	Encap	*bool	"PB(varint,3,req,name=encap)"
 	XXX_unrecognized	[]byte
 }
 func (this *Header) Reset() {
@@ -14,6 +19,18 @@ func (this *Header) Reset() {
 }
 func NewHeader() *Header {
 	return new(Header)
+}
+
+type SubHeader struct {
+	Type	*int32	"PB(varint,1,req,name=type)"
+	Encap	*bool	"PB(varint,2,req,name=encap)"
+	XXX_unrecognized	[]byte
+}
+func (this *SubHeader) Reset() {
+	*this = SubHeader{}
+}
+func NewSubHeader() *SubHeader {
+	return new(SubHeader)
 }
 
 type AcceptBool struct {

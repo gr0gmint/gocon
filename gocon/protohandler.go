@@ -117,12 +117,67 @@ func (this *ProtoProxy) readMsg() (*Header,[]byte, os.Error) {
     
     return header, newdata,nil
 } 
-func (this *ProtoProxy) SendMsg(data []byte, port int32, t int32) {
+
+func SubMsg(data []byte, t int32, encap bool) []byte {
+        header := NewSubHeader()
+        header.Type = proto.Int32(t)
+        header.Encap = proto.Bool(encap)
+        hdrdata,_ := proto.Marhal(header)
+        hdrlen := uint32(len(hdrdata))
+        datalen :=  uint32(len(data))
+        buf := make([]byte, 8+hdrlen+datalen)
+        binary.Write(this.SBuffer, binary.BigEndian, [2]uint32{hdrlen,datalen})
+        copy(buf[8:8+len(hdrdata)],hdrdata)
+        copy(buf[8+len(hdrdata):-1], data)
+        return buf
+
+}
+func UnSubMsg(data []byte) (*SubHeader, []byte) {
+    var hdrlen uint32
+    var datalen uint32
+    hdr,err := data[0:8]
+    if err != nil  {
+        return nil,err
+    }
+    fmt.Printf("len(data) = %d\n", len(data))
+    err = binary.Read(data[0:4], binary.BigEndian, &hdrlen)
+        if err != nil { return nil,nil,err }
+    err = binary.Read(data[4:8], binary.BigEndian, &datalen)
+        if err != nil { return nil,nil,err }
+            fmt.Printf("hdrlen=%d, datalen=%d\n", hdrlen, datalen)
+    if !(hdrlen < 96 && datalen < 16000 ) {
+        return nil,nil,os.ENOMEM
+    }
+    hdrdata := make(Buf, hdrlen)
+    newdata := make(Buf, datalen)
+    tmp,err := this.Read(this.Buffer[0:hdrlen])
+    if err != nil {
+        //this.Conn.Close()
+        return nil,nil,err
+    }
+    copy(hdrdata,tmp)
+    header := NewHeader()
+    err = proto.Unmarshal(hdrdata, header)
+    if err != nil {
+        return nil,nil,err
+    }
+    tmp,err = this.Read(this.Buffer[0:datalen])
+    if err != nil {
+        return nil,nil,err
+    }
+    copy(newdata,tmp)
+    
+    
+    return header, newdata,nil
+}
+
+func (this *ProtoProxy) SendMsg(data []byte, port int32, t int32, encap bool) {
     h := NewHot(func(shared map[string]interface{}){
         //self := shared["self"].(*GenericHot)
         header := NewHeader()
         header.Type = proto.Int32(t)
         header.Port = proto.Int32(port)
+        header.Encap = proto.Bool(encap)
         hdrdata,err := proto.Marshal(header)
         if err != nil {
             fmt.Printf("%s\n", err)
@@ -180,7 +235,7 @@ func (this *ProtoHandler) Acceptbool() {
         msg := NewAcceptBool()
         msg.Accept = proto.Bool(true)
         data,_ := proto.Marshal(msg)
-        this.Proxy.SendMsg(data, 0,0)
+        this.Proxy.SendMsg(data, 0,0,false)
 }
 func (this *ProtoHandler) Declinebool() {
         msg := NewAcceptBool()

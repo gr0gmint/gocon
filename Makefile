@@ -9,13 +9,14 @@ GOFILES=\
 	wanderer.go\
 	broadcast.go\
 	protohandlers.go\
-	pwan.go\
+	wanderer.pb.go\
 	filters.go
 
 default:
+	protoc --go_out=. wanderer.proto
 	8g $(GOFILES)
 	8l wanderer.8
 
 client: 
-	8g wandererclient.go pwan.go
+	8g wandererclient.go wanderer.pb.go
 	8l -o wan wandererclient.8 

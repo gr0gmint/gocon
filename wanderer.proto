@@ -1,4 +1,4 @@
-package pwan;
+package main;
 
 message Server { //Not really a message
 
@@ -16,6 +16,7 @@ message Server { //Not really a message
         SOCIAL = 11;
         QUESTLOG = 12;
         JSON = 13;
+        OBJECTPUSH = 14;
     }
 
 }
@@ -40,12 +41,40 @@ message Client {
     }
 }
 
-message VisibleObject {
+
+
+message GObject {
+    enum Type {
+        PLAYER = 1;
+        NPC = 2;
+        BEAST = 3;
+        WALL = 4;
+    }
     required int32 id = 1;
     required int32 char = 2;
     required string description = 3;
-    optional int32 color = 4;
-    optional int32 type = 5;
+    
+    required Type type = 4;
+    optional int32 color = 5;
+    
+    //Union
+    optional GObjectPlayer player = 50;
+    optional GObjectNPC npc = 51;
+    //End union
+    
+    optional bool disappear = 100;
+}
+message GObjectPlayer {
+    required string name = 1;
+    required bool idle = 2;
+    
+}
+
+
+message GObjectNPC {
+    required string name = 1;
+    required string function = 2;
+    
 }
 
 
