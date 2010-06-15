@@ -78,6 +78,7 @@ message UpdatePlayerCoord {
 message GObjectPlayer {
     required string name = 1;
     required bool idle = 2;
+    required bool sex = 3; //false = male, true = female
     
 }
 

@@ -8,8 +8,8 @@ import . "termbox"
 import "net"
 
 const (
-    MAN = "男"
-    WOMAN =  "女"
+    MALE = "男"
+    FEMALE =  "女"
 )
 
 const (
@@ -23,13 +23,6 @@ type ObjectHandler struct {
 
 type ClientHandler struct {
     ProtoHandler
-}
-
-type WorldWindow struct {
-    HotRoutine
-}
-type TextWindow struct {
-    HotRoutine
 }
 
 func NewObjectHandler(p *ProtoProxy) *ObjectHandler {
@@ -55,6 +48,11 @@ func (this *ObjectHandler) Main() {
                 //Stdwin.Refresh()
             default:
                 //Stdwin.Addstr(0,5, "Wtf man", 0)
+            case t == Server_OBJECTPUSH:
+                m := NewGObject()
+                err := proto.Unmarshal(data,m)
+                  if err != nil { return }
+                Addstr(1,2, GObject_Type_name[int32(*m.Type)],YELLOW,BLACK)
         }
     }
 }
@@ -65,31 +63,34 @@ func NewClientHandler(p *ProtoProxy) *ClientHandler {
     c.Init()
     return c
 }
-func Box(startx,starty, width, height uint, fg, bg uint16,boxcharacters []int ) { //"─│┌┐└┘"
+func Box(startx,starty, width, height uint, fg, bg uint16,boxcharacters []int ) { // "─│┌┐└┘"
      
     ChangeCell(startx,starty, boxcharacters[2], fg,bg)
-    ChangeCell(startx+width,starty, boxcharacters[3], fg,bg)
+    ChangeCell(startx+width-1,starty, boxcharacters[3], fg,bg)
     ChangeCell(startx,starty+height, boxcharacters[4], fg,bg)
-     ChangeCell(startx+width,starty+height, boxcharacters[5], fg,bg)
-     for i := startx +1; i < startx+width; i++ {
+     ChangeCell(startx+width-1,starty+height, boxcharacters[5], fg,bg)
+     
+     for i := startx +1; i < startx+width-1; i++ {
         ChangeCell(i,starty,boxcharacters[0], fg,bg)
      }
-          for i := startx +1; i < startx+width; i++ {
+          for i := startx +1; i < startx+width-1; i++ {
         ChangeCell(i,starty+height,boxcharacters[0], fg,bg)
      }
-          for i := starty +1; i < startx+width; i++ {
+          for i := starty +1; i < starty+height; i++ {
         ChangeCell(startx,i,boxcharacters[1], fg,bg)
      }
-               for i := starty +1; i < startx+width; i++ {
-        ChangeCell(startx+width,i,boxcharacters[1], fg,bg)
+               for i := starty +1; i < starty+height; i++ {
+        ChangeCell(startx+width-1,i,boxcharacters[1], fg,bg)
      }
+     
+     
      
 }
 func StdBox(startx,starty, width, height uint, fg, bg uint16) {
     Box(startx,starty, width, height, fg, bg, &[...]int{'─', '│', '┌', '┐', '└', '┘'})
 }
 func DrawEmptyMap() {
-    StdBox(2,2,10,10, YELLOW,BLACK)
+    StdBox(0,0,Width()-1,Height()-1, YELLOW,BLACK)
 }
 func Addstr(x,y uint, s string, fg, bg uint16, v ... interface{}) {
     l := Width()

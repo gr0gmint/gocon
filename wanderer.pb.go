@@ -223,6 +223,7 @@ func NewUpdatePlayerCoord() *UpdatePlayerCoord {
 type GObjectPlayer struct {
 	Name	*string	"PB(bytes,1,req,name=name)"
 	Idle	*bool	"PB(varint,2,req,name=idle)"
+	Sex	*bool	"PB(varint,3,req,name=sex)"
 	XXX_unrecognized	[]byte
 }
 func (this *GObjectPlayer) Reset() {

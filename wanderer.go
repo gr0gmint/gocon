@@ -26,7 +26,7 @@ type WorldHandler struct {
 type Player struct {
     Name string
     ProtoHandlers map[int]interface{}
-    
+    Aura *Interval
 }
 
 type Coord struct {
@@ -115,6 +115,15 @@ func (w *World) GetCoord(x,y int) *Coord {
     return w.Coords[x][y]
 }
 
+func (this *WorldHandler) MakeTestObjects() {
+    //Create Interval with span 10,10 at 100,100
+    in := FDistanceFromPlayer.RegisterInterval(95,105,95,105)
+    in.CBack = func(b *Broadcast) {
+        
+    }
+    
+}
+
 
 func (this *WorldHandler) Main()  {
     this.Name =  "worldhandler"
@@ -122,7 +131,8 @@ func (this *WorldHandler) Main()  {
     this.Init()
     this.World = NewWorld()
     go this.HotStart()
-    
+       
+    this.MakeTestObjects()
 }
 const (
     DIRECTION_UP = iota
@@ -142,6 +152,8 @@ func (this *WorldHandler) PlacePlayer(player *Player, coord *Coord) bool {
             BServer.Broadcast(b)
             fmt.Printf("Pushing %d %d\n", coord.X, coord.Y)
             (player.ProtoHandlers[PORT_PUSH].(*PushProtoHandler)).UpdatePlayerCoordinate(coord.X, coord.Y)
+            //Check for GObjects to push
+            
             m.Key = "accepted"
         } else {
             m.Key = "declined"
