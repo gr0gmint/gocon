@@ -38,7 +38,7 @@ func (this *PushProtoHandler) UpdatePlayerCoordinate(x,y int) {
         fmt.Printf("E: %s", err)
         return
     }
-    this.Proxy.SendMsg(data, Server_UPDATELOCATION, PORT_PUSH, false)
+    this.Proxy.SendMsg(data,PORT_PUSH, Server_UPDATELOCATION,  false)
 }
 func (this *PushProtoHandler) Main() {
     

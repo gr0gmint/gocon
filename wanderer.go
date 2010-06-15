@@ -140,6 +140,7 @@ func (this *WorldHandler) PlacePlayer(player *Player, coord *Coord) bool {
             b.Data["player"] = player
             b.Data["coord"] = coord
             BServer.Broadcast(b)
+            fmt.Printf("Pushing %d %d\n", coord.X, coord.Y)
             (player.ProtoHandlers[PORT_PUSH].(*PushProtoHandler)).UpdatePlayerCoordinate(coord.X, coord.Y)
             m.Key = "accepted"
         } else {
@@ -181,6 +182,7 @@ func (this *WorldHandler) PlayerMove(player *Player, direction int) bool {
             } else {    
                 newcoord := this.World.GetCoord(currentcord.X+dirx, currentcord.Y+diry)
                 if this.PlacePlayer(player, newcoord) {
+                    fmt.Printf("Placed player at %d, %d\n", newcoord.X, newcoord.Y)
                     m.Key = "accepted"
                 } else {
                     m.Key = "declined"

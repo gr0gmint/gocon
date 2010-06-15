@@ -69,9 +69,9 @@ func (this *ProtoProxy) Read (buf Buf) (Buf, os.Error) {
             if err != nil {
                 return nil, err
             }
-            fmt.Printf("read %d bytes\n", n)
+            //fmt.Printf("read %d bytes\n", n)
             total += n
-            fmt.Printf("total: %d\n",total)
+            //fmt.Printf("total: %d\n",total)
             if err !=nil { return nil,err }
         }
         
@@ -86,12 +86,12 @@ func (this *ProtoProxy) readMsg() (*Header,[]byte, os.Error) {
     if err != nil  {
         return nil,nil,err
     }
-    fmt.Printf("len(data) = %d\n", len(data))
+    //fmt.Printf("len(data) = %d\n", len(data))
     err = binary.Read(data[0:4], binary.BigEndian, &hdrlen)
         if err != nil { return nil,nil,err }
     err = binary.Read(data[4:8], binary.BigEndian, &datalen)
         if err != nil { return nil,nil,err }
-            fmt.Printf("hdrlen=%d, datalen=%d\n", hdrlen, datalen)
+            //fmt.Printf("hdrlen=%d, datalen=%d\n", hdrlen, datalen)
     if !(hdrlen < 96 && datalen < 16000 ) {
         return nil,nil,os.ENOMEM
     }
@@ -197,7 +197,7 @@ func (this *ProtoProxy) SendMsg(data []byte, port int32, t int32, encap bool) {
 
 func (this *ProtoProxy) ReadMsg(port int) (*Header, []byte) {
     if this.PortChans[port] == nil {
-        this.PortChans[port] = make(chan hdr_n_data,10)
+        this.PortChans[port] = make(chan hdr_n_data)
     }
     m := <- this.PortChans[port]
     return m.header, m.data
